@@ -1,0 +1,17 @@
+{
+	"@metadata": {
+		"authors": [
+			"Watermelon juice",
+			"Article1",
+			"Hedda"
+		]
+	},
+	"debugtemplates-args-title": "Parametreler",
+	"debugtemplates-args-name": "Ad",
+	"debugtemplates-args-set": "Ayarla?",
+	"debugtemplates-args-unused": "Kullanılmayanı gizle/göster",
+	"debugtemplates-args-value-clear": "Tümünü Temizle",
+	"debugtemplates-error-button": "Hata iletilerini temizle",
+	"debugtemplates-error-template-page": "Hata:Şablon sayfası yüklenemedi:",
+	"debugtemplates-radio-select": "hiçbir şey, ya da"
+}
