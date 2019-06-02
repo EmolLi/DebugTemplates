@@ -36,7 +36,7 @@ class SpecialDebugTemplates extends SpecialPage {
 		}
 
 		$out = $this->getOutput();
-		$out->addWikiMsg( 'debugtemplates-intro' );
+		// $out->addWikiMsg( 'debugtemplates-intro' );
 		$out->addHTML( $this->makeForm( $titleStr, $input ) );
 	}
 
@@ -54,60 +54,62 @@ class SpecialDebugTemplates extends SpecialPage {
 		$request = $this->getRequest();
 		$user = $this->getUser();
 
-		$form = "<div><fieldset><legend>" . $this->msg( 'debugtemplates-form' )->escaped() . "</legend>\n";
-
-		$form .= '<div style="display:inline-block;width:40%;">';
-
-		// Create a field holding the url for api.php calls.  This is set to readonly, but still
-		// presented and even used so it could be changed if ever cross-site scripting is possible.
-		$form .= '<p>' . Xml::inputLabel(
-			$this->msg( 'debugtemplates-api' )->plain(),
-			'wpAPIPrefix',
-			'dt-api',
-			60,
-			$wgServer . $wgScriptPath . '/api.php',
-			[ 'autofocus' => '', 'class' => 'mw-ui-input-inline', 'style' => 'width:100%;', 'readonly' => 'readonly' ]
-		) . '</p>';
-
-		// Entry of the context title of the page that will be debugged.
-		$form .= '<p>' . Xml::inputLabel(
-			$this->msg( 'debugtemplates-title' )->plain(),
-			'wpContextTitle',
-			'dt-title',
-			60,
-			$title,
-			[ 'autofocus' => '', 'class' => 'mw-ui-input-inline', 'style' => 'width:100%;' ]
-		) . '</p></div>';
-
-		// The main input area for entering and editing the text being debugged.
-		$form .= '<div style="display:inline-block;width:70%;"><h2>'
-			. $this->msg( 'debugtemplates-input' )->text() . '</h2>';
-		$form .= Xml::textarea(
-			'dt-input',
-			$input,
-			1,
-			15,
-			[ 'id' => 'dt-input' ]
-		) . '</div>';
-
-		// Next to the editable input is an array of input parameters, along with some buttons for operating on them.
-		$form .= $this->makeArgTable();
-
-		// Ok that's everything in the first main div of input data.
-		$form .= "</fieldset></div>";
-
-		// Make an error-message output pane.
-		$form .= '<span class="dt-error" id="dt-error"></span>';
-
-		// The interactive debug area starts with a few buttons that do and configure things.
-		$form .= "<h2>" . $this->msg( 'debugtemplates-output' )->escaped() . "</h2>\n";
-		$form .= $this->makeDebugButtons();
-
-		// Next comes the stack trace.
-		$form .= $this->makeBreadCrumbs();
-
-		// Finally, the actual interactive main debug pane.
-		$form .= $this->makeDebugPane();
+		$form = "<div id='debug-template-debugger'></div>";
+		//
+		// $form = "<div><fieldset><legend>" . $this->msg( 'debugtemplates-form' )->escaped() . "</legend>\n";
+		//
+		// $form .= '<div style="display:inline-block;width:40%;">';
+		//
+		// // Create a field holding the url for api.php calls.  This is set to readonly, but still
+		// // presented and even used so it could be changed if ever cross-site scripting is possible.
+		// $form .= '<p>' . Xml::inputLabel(
+		// 	$this->msg( 'debugtemplates-api' )->plain(),
+		// 	'wpAPIPrefix',
+		// 	'dt-api',
+		// 	60,
+		// 	$wgServer . $wgScriptPath . '/api.php',
+		// 	[ 'autofocus' => '', 'class' => 'mw-ui-input-inline', 'style' => 'width:100%;', 'readonly' => 'readonly' ]
+		// ) . '</p>';
+		//
+		// // Entry of the context title of the page that will be debugged.
+		// $form .= '<p>' . Xml::inputLabel(
+		// 	$this->msg( 'debugtemplates-title' )->plain(),
+		// 	'wpContextTitle',
+		// 	'dt-title',
+		// 	60,
+		// 	$title,
+		// 	[ 'autofocus' => '', 'class' => 'mw-ui-input-inline', 'style' => 'width:100%;' ]
+		// ) . '</p></div>';
+		//
+		// // The main input area for entering and editing the text being debugged.
+		// $form .= '<div style="display:inline-block;width:70%;"><h2>'
+		// 	. $this->msg( 'debugtemplates-input' )->text() . '</h2>';
+		// $form .= Xml::textarea(
+		// 	'dt-input',
+		// 	$input,
+		// 	1,
+		// 	15,
+		// 	[ 'id' => 'dt-input' ]
+		// ) . '</div>';
+		//
+		// // Next to the editable input is an array of input parameters, along with some buttons for operating on them.
+		// $form .= $this->makeArgTable();
+		//
+		// // Ok that's everything in the first main div of input data.
+		// $form .= "</fieldset></div>";
+		//
+		// // Make an error-message output pane.
+		// $form .= '<span class="dt-error" id="dt-error"></span>';
+		//
+		// // The interactive debug area starts with a few buttons that do and configure things.
+		// $form .= "<h2>" . $this->msg( 'debugtemplates-output' )->escaped() . "</h2>\n";
+		// $form .= $this->makeDebugButtons();
+		//
+		// // Next comes the stack trace.
+		// $form .= $this->makeBreadCrumbs();
+		//
+		// // Finally, the actual interactive main debug pane.
+		// $form .= $this->makeDebugPane();
 
 		return $form;
 	}

@@ -1,11 +1,19 @@
 {
-	"private": true,
-	"scripts": {
-		"test": "grunt test"
-	},
-	"devDependencies": {
-		"grunt": "1.0.3",
-		"grunt-banana-checker": "0.5.0",
-		"grunt-jsonlint": "1.1.0"
-	}
+  "private": true,
+  "scripts": {
+    "test": "grunt test",
+    "babel": "babel --presets @babel/preset-react _ext.debugTemplates.js -o ext.debugTemplates.js"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.4.5",
+    "@babel/preset-react": "^7.0.0",
+    "babel-plugin-transform-react-jsx": "^6.24.1",
+    "grunt": "1.0.3",
+    "grunt-babel": "^8.0.0",
+    "grunt-banana-checker": "0.5.0",
+    "grunt-jsonlint": "1.1.0"
+  },
+  "dependencies": {
+    "antd": "^3.19.1"
+  }
 }
