@@ -51,18 +51,68 @@ function loadjs(file, type = "text/javascript") {
 }
 
 Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
-  function Welcome(props) {
-    return <h1>Hello, {props.name}</h1>;
-  }
+  const { Row, Col, Input, PageHeader, Typography } = antd;
+  const { TextArea } = Input;
+  const { Title } = Typography;
+  class App extends React.Component {
+    state = {
+      // checkedList: defaultCheckedList,
+      // indeterminate: true,
+      // checkAll: false
+    };
+    //
+    // onChange = checkedList => {
+    //   this.setState({
+    //     checkedList,
+    //     indeterminate:
+    //       !!checkedList.length && checkedList.length < plainOptions.length,
+    //     checkAll: checkedList.length === plainOptions.length
+    //   });
+    // };
+    //
+    // onCheckAllChange = e => {
+    //   this.setState({
+    //     checkedList: e.target.checked ? plainOptions : [],
+    //     indeterminate: false,
+    //     checkAll: e.target.checked
+    //   });
+    // };
 
-  function App() {
-    return (
-      <div>
-        <Welcome name="Sara" />
-        <Welcome name="Cahal" />
-        <Welcome name="Edite" />
-      </div>
-    );
+    render() {
+      return (
+        <Row>
+          <Col span={12}>
+            <div id="debugger-input" className="debugger-section">
+              <Title level={4}>Input</Title>
+              <TextArea id="debugger-input-textarea" />
+            </div>
+            <div id="debugger-errors" className="debugger-section">
+              <Title level={4}>Errors</Title>
+              <div id="debugger-errors-content" />
+            </div>
+          </Col>
+          <Col span={12}>
+            <div id="debugger-debugging-pane" className="debugger-section">
+              <Title level={4}>Debugging Pane</Title>
+              <div>
+                <div id="debugger-result">
+                  <Title level={4} type="secondary">
+                    Result
+                  </Title>
+                  <div id="debugger-result-content" />
+                </div>
+                <div id="debugger-tree-view">
+                  <Title level={4} type="secondary">
+                    Tree View
+                  </Title>
+                  <div id="debugger-tree-view-content" />
+                </div>
+              </div>
+            </div>
+          </Col>
+        </Row>
+      );
+    }
   }
 
   ReactDOM.render(<App />, root);
