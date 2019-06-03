@@ -51,32 +51,16 @@ function loadjs(file, type = "text/javascript") {
 }
 
 Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
-  const { Row, Col, Input, PageHeader, Typography } = antd;
+  const { Row, Col, Input, PageHeader, Typography, Button } = antd;
   const { TextArea } = Input;
   const { Title } = Typography;
   class App extends React.Component {
     state = {
+      src: "test"
       // checkedList: defaultCheckedList,
       // indeterminate: true,
       // checkAll: false
     };
-    //
-    // onChange = checkedList => {
-    //   this.setState({
-    //     checkedList,
-    //     indeterminate:
-    //       !!checkedList.length && checkedList.length < plainOptions.length,
-    //     checkAll: checkedList.length === plainOptions.length
-    //   });
-    // };
-    //
-    // onCheckAllChange = e => {
-    //   this.setState({
-    //     checkedList: e.target.checked ? plainOptions : [],
-    //     indeterminate: false,
-    //     checkAll: e.target.checked
-    //   });
-    // };
 
     render() {
       return (
@@ -84,7 +68,11 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
           <Col span={12}>
             <div id="debugger-input" className="debugger-section">
               <Title level={4}>Input</Title>
-              <TextArea id="debugger-input-textarea" />
+              <TextArea
+                id="debugger-input-textarea"
+                value={this.state.src}
+                onChange={e => this.setState({ src: e.target.value })}
+              />
             </div>
             <div id="debugger-errors" className="debugger-section">
               <Title level={4}>Errors</Title>
@@ -93,7 +81,12 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
           </Col>
           <Col span={12}>
             <div id="debugger-debugging-pane" className="debugger-section">
-              <Title level={4}>Debugging Pane</Title>
+              <Title level={4}>
+                Debugging Pane
+                <Button id="start-debug" type="primary">
+                  Debug
+                </Button>
+              </Title>
               <div>
                 <div id="debugger-result">
                   <Title level={4} type="secondary">
