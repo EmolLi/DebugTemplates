@@ -5,7 +5,6 @@
  * @license CC BY-SA 3.0
  **/
 let root = document.getElementById("debug-template-debugger");
-console.log(root);
 
 let libs = [
   ["https://unpkg.com/react@16/umd/react.development.js", "text/javascript"],
@@ -51,39 +50,171 @@ function loadjs(file, type = "text/javascript") {
 }
 
 Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
-  const { Row, Col, Input, PageHeader, Typography, Button } = antd;
-  const { TextArea } = Input;
-  const { Title } = Typography;
+  const { Row, Col, Input, PageHeader, Typography, Button, Tree } = antd;
+  const { TextArea, Search } = Input;
+  const { Title, Paragraph, Text } = Typography;
+  const { TreeNode } = Tree;
+
   class App extends React.Component {
     state = {
-      src: "test"
+      src: "test",
+      treeView: null,
+      result: "This is the result.. sdfasfvc dsfsdds",
+      errors: "",
+      title: "",
+      url: "http://localhost/mediawiki-1.32.1/api.php",
+      homePageUrl: "http://localhost/mediawiki-1.32.1/index.php"
       // checkedList: defaultCheckedList,
       // indeterminate: true,
       // checkAll: false
     };
+    evalResult() {
+      const { src, title, url } = this.state;
+      apiEval(src, title, url, (k, t) => {
+        if (k == "OK") {
+          var result = window.JSON.parse(t);
+          if (apiEvalHasResult(result)) {
+            this.setState({ errors: "", result: apiEvalGetResult(result) });
+          } else {
+            this.setState({ errors: t });
+            // setBusy(false);
+          }
+        } else {
+          this.setState({ errors: k });
+          // setBusy(false);
+        }
+      });
+    }
 
+    getParseTree() {
+      const { src, title, url } = this.state;
+      apiParse(src, title, url, (k, t) => {
+        if (k == "OK") {
+          var result = window.JSON.parse(t);
+          if (result.expandtemplates && result.expandtemplates.parsetree) {
+            let ast = result.expandtemplates.parsetree
+              ? getXMLParser()(result.expandtemplates.parsetree)
+              : null;
+            nindex = 0;
+            let treeView = simplifyAst(ast.children[0]);
+            this.setState({ treeView: treeView, errors: "" });
+            console.log(treeView);
+            // updateFromXML(result.expandtemplates.parsetree, newparams);
+          } else {
+            // updateFromXML("");
+            if (!result.error || result.error.code != "notext")
+              this.setState({ treeView: null, errors: t });
+            // debugNote(mw.message("debugtemplates-error-parse") + " " + t);
+          }
+        } else {
+          this.setState({ treeView: null, errors: k });
+          // updateFromXML("");
+          // debugNote(mw.message("debugtemplates-error-parse") + " " + k);
+        }
+      });
+    }
+
+    getTemplateSource = async (title = this.state.title) => {
+      if (!title) return;
+      try {
+        let src = await apiGetSource(title, this.state.homePageUrl);
+        this.setState({ errors: "", src });
+      } catch (err) {
+        this.setState({ src: "", errors: err.message });
+      }
+    };
+
+    debug = () => {
+      if (!this.state.src) {
+        this.setState({ treeView: null, result: "", errors: "" });
+      } else {
+        this.evalResult();
+        this.getParseTree();
+      }
+    };
+    onSelect = (selectedKeys, info) => {
+      console.log("selected", selectedKeys, info);
+    };
+
+    onCheck = (checkedKeys, info) => {
+      console.log("onCheck", checkedKeys, info);
+    };
+
+    generateTreeNode(node) {
+      return (
+        <TreeNode
+          title={`${node.type ? node.type : ""} ${
+            node.value ? node.value : ""
+          }`}
+          key={node.id}
+        >
+          {node.children.length > 0 &&
+            node.children.map(c => this.generateTreeNode(c))}
+        </TreeNode>
+      );
+    }
+
+    TreeView() {
+      const { treeView } = this.state;
+      return (
+        <div id="debugger-tree-view">
+          <Title level={4} type="secondary">
+            Tree View
+          </Title>
+          <div id="debugger-tree-view-content">
+            {treeView && (
+              <Tree onSelect={this.onSelect} onCheck={this.onCheck}>
+                {this.generateTreeNode(treeView)}
+              </Tree>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // {errors && <Text type="danger">{errors}</Text>}
     render() {
+      const { src, title, result, url, homePageUrl, errors } = this.state;
       return (
         <Row>
           <Col span={12}>
             <div id="debugger-input" className="debugger-section">
               <Title level={4}>Input</Title>
+              <Input
+                placeholder="API URL"
+                value={url}
+                onChange={e => this.setState({ url: e.target.value })}
+              />
+              <Input
+                placeholder="Home Page URL"
+                value={homePageUrl}
+                onChange={e => this.setState({ homePageUrl: e.target.value })}
+              />
+              <Search
+                placeholder="Template Title"
+                value={title}
+                onChange={e => this.setState({ title: e.target.value })}
+                onSearch={this.getTemplateSource}
+                enterButton
+              />
               <TextArea
                 id="debugger-input-textarea"
-                value={this.state.src}
+                value={src}
                 onChange={e => this.setState({ src: e.target.value })}
               />
             </div>
             <div id="debugger-errors" className="debugger-section">
               <Title level={4}>Errors</Title>
-              <div id="debugger-errors-content" />
+              <div id="debugger-errors-content">
+                {errors && <Text type="danger">Error: {errors}</Text>}
+              </div>
             </div>
           </Col>
           <Col span={12}>
             <div id="debugger-debugging-pane" className="debugger-section">
               <Title level={4}>
                 Debugging Pane
-                <Button id="start-debug" type="primary">
+                <Button id="start-debug" type="primary" onClick={this.debug}>
                   Debug
                 </Button>
               </Title>
@@ -92,14 +223,11 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
                   <Title level={4} type="secondary">
                     Result
                   </Title>
-                  <div id="debugger-result-content" />
+                  <div id="debugger-result-content">
+                    <Paragraph>{result}</Paragraph>
+                  </div>
                 </div>
-                <div id="debugger-tree-view">
-                  <Title level={4} type="secondary">
-                    Tree View
-                  </Title>
-                  <div id="debugger-tree-view-content" />
-                </div>
+                {this.TreeView()}
               </div>
             </div>
           </Col>
@@ -231,8 +359,8 @@ function doPost(url, params, callback) {
   var x = new XMLHttpRequest();
   x.open("POST", url, true);
   x.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-  x.setRequestHeader("Content-length", params.length);
-  x.setRequestHeader("Connection", "close");
+  // x.setRequestHeader("Content-length", params.length);
+  // x.setRequestHeader("Connection", "close");
   x.setRequestHeader("Api-User-Agent", "DebugTemplatesExtension/1.0");
 
   x.onreadystatechange = function() {
@@ -254,15 +382,13 @@ function doPost(url, params, callback) {
  * @param {string} t The string to parse; it will be URI-encoded.
  * @param {function} callback Receives 1 or 2 args with the JSON-encoded result, as per doPost.
  **/
-function apiParse(t, callback) {
+function apiParse(t, title, url, callback) {
   var args = "action=expandtemplates&format=json&prop=parsetree";
-  var title = document.getElementById("dt-title").value;
   if (title) {
     args = args + "&title=" + encodeURIComponent(title);
   }
   args = args + "&text=" + encodeURIComponent(t);
   //debugNote("Action is "+action);
-  var url = document.getElementById("dt-api").value;
   doPost(url, args, callback);
 }
 
@@ -272,20 +398,27 @@ function apiParse(t, callback) {
  * @param {string} t The string to parse; it will be URI-encoded.
  * @param {function} callback Receives 1 or 2 args with the JSON-encoded result, as per doPost.
  **/
-function apiEval(t, callback) {
+function apiEval(t, title, url, callback) {
   //var args = "action=expandtemplates&format=json&prop=wikitext&includecomments=";
   var args = "action=expandframe&format=json";
-  var title = document.getElementById("dt-title").value;
   if (title) {
     args = args + "&title=" + encodeURIComponent(title);
   }
   args = args + "&text=" + encodeURIComponent(t);
-  args = args + "&frame=" + encodeURIComponent(assembleParams());
+  // args = args + "&frame=" + encodeURIComponent(assembleParams());
   // debugNote("Action is "+args);
-  var url = document.getElementById("dt-api").value;
   doPost(url, args, callback);
 }
 
+async function apiGetSource(title, homePageUrl) {
+  let response = await fetch(`${homePageUrl}/Template:${title}?action=raw`);
+  content = await response.text();
+  if (!response.ok) {
+    if (response.status == 404) throw new Error(`Template ${title} not found.`);
+    throw new Error(response.status + content);
+  }
+  return content;
+}
 /**
  * Determines whether a proper result was obtained from an apiEval call.
  *
@@ -600,55 +733,55 @@ function updateFromXML(x, inheritparams) {
   // First parse the xml and build an AST
   ast = x === "" ? null : getXMLParser()(x);
 
-  // Wipe out the global var of previous params and define a new set
-  params = [];
-
-  // Now extract all the parameters in the AST so we can build our parameter list
-  var newparams = {};
-  var astparams = null;
-  if (ast) {
-    astparams = ast.getElementsByTagName("tplarg");
-    if (astparams) {
-      for (i = 0; i < astparams.length; i++) {
-        pname = getParamName(astparams[i], i);
-        if (newparams[pname] === undefined) {
-          newparams[pname] = true;
-          params.push({ name: pname, row: 0, used: true });
-        }
-      }
-    }
-  }
-  // Add in any in inheritparams
-  if (inheritparams) {
-    for (var p in inheritparams) {
-      pname = p.trim();
-      if (newparams[pname] === undefined) {
-        newparams[pname] = true;
-        params.push({ name: pname, row: 0 });
-      }
-    }
-  }
-  // Now sort them alphabetically
-  params.sort(function(a, b) {
-    return a.name.localeCompare(b.name);
-  });
-  // Create the mapping from AST nodes to their entry in the param array
-  if (astparams) {
-    for (i = 0; i < astparams.length; i++) {
-      pname = getParamName(astparams[i], i);
-      // Look for it in our list of params
-      for (var j = 0; j < params.length; j++) {
-        if (params[j].name == pname) {
-          // Set the 'pindex' property to the row number
-          astparams[i].setAttribute("pindex", j);
-          break;
-        }
-      }
-    }
-  }
-
-  // Construct the params array
-  updateParams(params, inheritparams);
+  // // Wipe out the global var of previous params and define a new set
+  // params = [];
+  //
+  // // Now extract all the parameters in the AST so we can build our parameter list
+  // var newparams = {};
+  // var astparams = null;
+  // if (ast) {
+  //   astparams = ast.getElementsByTagName("tplarg");
+  //   if (astparams) {
+  //     for (i = 0; i < astparams.length; i++) {
+  //       pname = getParamName(astparams[i], i);
+  //       if (newparams[pname] === undefined) {
+  //         newparams[pname] = true;
+  //         params.push({ name: pname, row: 0, used: true });
+  //       }
+  //     }
+  //   }
+  // }
+  // // Add in any in inheritparams
+  // if (inheritparams) {
+  //   for (var p in inheritparams) {
+  //     pname = p.trim();
+  //     if (newparams[pname] === undefined) {
+  //       newparams[pname] = true;
+  //       params.push({ name: pname, row: 0 });
+  //     }
+  //   }
+  // }
+  // // Now sort them alphabetically
+  // params.sort(function(a, b) {
+  //   return a.name.localeCompare(b.name);
+  // });
+  // // Create the mapping from AST nodes to their entry in the param array
+  // if (astparams) {
+  //   for (i = 0; i < astparams.length; i++) {
+  //     pname = getParamName(astparams[i], i);
+  //     // Look for it in our list of params
+  //     for (var j = 0; j < params.length; j++) {
+  //       if (params[j].name == pname) {
+  //         // Set the 'pindex' property to the row number
+  //         astparams[i].setAttribute("pindex", j);
+  //         break;
+  //       }
+  //     }
+  //   }
+  // }
+  //
+  // // Construct the params array
+  // updateParams(params, inheritparams);
   // Construct the output
   htmlFromAST(ast);
 }
@@ -817,14 +950,25 @@ function htmlFromAST(ast) {
   nTox = {};
   xindex = 0;
   // No undo is possible after this
-  resetButtonNode.setAttribute("disabled", "disabled");
-  undoButtonNode.setAttribute("disabled", "disabled");
+  // resetButtonNode.setAttribute("disabled", "disabled");
+  // undoButtonNode.setAttribute("disabled", "disabled");
   if (ast && ast.documentElement) {
     var oh = htmlFromAST_r(ast.documentElement);
-    setOutput(oh);
+    // setOutput(oh);
   }
 }
 
+function simplifyAst(node) {
+  if (!node) return null;
+  let n = {
+    type: node.tagName,
+    value: node.nodeValue,
+    children: [],
+    id: nindex++
+  };
+  node.childNodes.forEach(c => n.children.push(simplifyAst(c)));
+  return n;
+}
 /**
  * Recursive entry point to construct the DOM tree from the AST.
  *
@@ -882,7 +1026,7 @@ function htmlFromAST_r(node) {
           h.appendChild(htmlFromAST_r(next));
           next = next.nextSibling;
         }
-        h.appendChild(htmlFromAST_r(next));
+        if (next.tagName == "value") h.appendChild(htmlFromAST_r(next));
       }
       break;
     case "title":
@@ -982,6 +1126,187 @@ function htmlFromAST_r(node) {
   }
   return h;
 }
+//
+// function treeFromAST_r(node) {
+//   var t, i, span, next;
+//   // This shouldn't happen but we'll be defensive
+//   if (node === undefined)
+//     throw new Error("Error: failed to generate tree view. Undefined node.");
+//
+//   switch (node.tagName) {
+//     case "root":
+//       t = { type: "root", children: [] };
+//       // The <root> contains a list of elements
+//       // h = document.createElement("span");
+//       // h.className = "dt-node";
+//       // A special id for the root DOM node
+//       // h.setAttribute("id", "dt-id-root");
+//       // span = document.createElement("span");
+//       // span.className = "dt-node";
+//       // i = nindex++;
+//       // node.id = xindex++;
+//       // span.setAttribute("id", "dt-id-" + i);
+//       // h.appendChild(span);
+//       node.childNodes.forEach(c => t.children.push(treeFromAST_r(c)));
+//       // for (i = 0; i < treeFromAST_rnode.childNodes.length; i++) {
+//       // t.children.push(htmlFromAST_r(node.childNodes[i]));
+//       // }
+//       break;
+//     case "template":
+//       t = treeFromAST_r_template(node);
+//       break;
+//     case "part":
+//       // A <part> has a <name> and a <value>, possibly separated by an "="
+//       if (node.childNodes.length != 2 && node.childNodes.length != 3) {
+//         throw new Error(
+//           "improper argument structure: " + node.childNodes.length
+//         );
+//         // I don't think this is possible
+//         // h = document.createElement("span");
+//         // h.className = "dt-error";
+//         // h.appendChild(
+//         //   document.createNode(
+//         //     "improper argument structure: " + node.childNodes.length
+//         //   )
+//         // );
+//       } else {
+//         // First child is the name
+//         // h = document.createElement("span");
+//         t = { type: "Argument", children: [] };
+//         t.children.push(treeFromAST_r(node.firstChild));
+//         // h.className = "dt-node dt-node-arg";
+//         // h.appendChild(treeFromAST_r(node.firstChild));
+//         next = node.firstChild.nextSibling;
+//         if (next.tagName != "value") {
+//           // The "=" sign
+//           // h.appendChild(htmlFromAST_r(next));
+//           next = next.nextSibling;
+//         }
+//         t.children.push(treeFromAST_r(next));
+//       }
+//       break;
+//     case "title":
+//       t = { type: "Title", children: [] };
+//       // h = document.createElement("span");
+//       // h.className = "dt-node dt-node-title";
+//       t.childNodes.forEach(c => treeFromAST_r(c));
+//       // for (i = 0; i < node.childNodes.length; i++) {
+//       // h.appendChild(htmlFromAST_r(node.childNodes[i]));
+//       // }
+//       break;
+//     case "value":
+//       t = { type: "Value", children: [] };
+//       // h = document.createElement("span");
+//       // h.className = "dt-node dt-node-value";
+//       t.childNodes.forEach(c => treeFromAST_r(c));
+//       // for (i = 0; i < node.childNodes.length; i++) {
+//       //   h.appendChild(htmlFromAST_r(node.childNodes[i]));
+//       // }
+//       break;
+//     case "name":
+//       t = { type: "Name", children: [] };
+//       t.childNodes.forEach(c => treeFromAST_r(c));
+//       // h = document.createElement("span");
+//       // h.className = "dt-node dt-node-name";
+//       // for (i = 0; i < node.childNodes.length; i++) {
+//       //   h.appendChild(htmlFromAST_r(node.childNodes[i]));
+//       // }
+//       break;
+//     case "tplarg":
+//       t = treeFromAST_r_tplarg(node);
+//       break;
+//     case "comment":
+//       t = { type: "Comment", children: [] };
+//       // h = document.createElement("span");
+//       // h.className = "dt-node dt-node-comment";
+//       t.children.push(treeFromAST_r(node.firstChild));
+//       // h.appendChild(htmlFromAST_r(node.firstChild));
+//       break;
+//     case "ignore":
+//       // These wrap <includeonly> and </onlyinclude> and their closers
+//       if (node.childNodes.length > 0) {
+//         t = { type: "Ignore", children: [] };
+//         // h = document.createElement("span");
+//         // h.className = "dt-node dt-node-ignore";
+//         t.childNodes.forEach(c => treeFromAST_r(c));
+//         // for (i = 0; i < node.childNodes.length; i++) {
+//         //   h.appendChild(htmlFromAST_r(node.childNodes[i]));
+//         // }
+//       }
+//       break;
+//     case "ext":
+//       break;
+//     // The only nodes we recognize are nowiki and pre
+//     // if (
+//     //   node.firstChild &&
+//     //   node.firstChild.tagName == "name" &&
+//     //   node.firstChild.firstChild &&
+//     //   node.firstChild.firstChild.nodeType == 3 &&
+//     //   (node.firstChild.firstChild.nodeValue == "nowiki" ||
+//     //     node.firstChild.firstChild.nodeValue == "pre")
+//     // ) {
+//     //   // Should have a <name>, an <attribute>, an <inner> and optionally a <close>
+//     //   let extname = node.firstChild.firstChild.nodeValue;
+//     //   t = { type: `ext`, children: [], value: `<${extname}` };
+//     //   // h = document.createElement("span");
+//     //   // h.className = "dt-node dt-node-ext dt-node-ext-" + extname;
+//     //   // h.appendChild(document.createTextNode("<" + extname));
+//     //   next = node.firstChild.nextSibling;
+//     //   if (next && next.tagName == "attr") {
+//     //     if (next.firstChild) {
+//     //       t.value += ` ${next.firstChild.nodeValue}`;
+//     //       // t.children.push({ type: "Attr", value: next.firstChild.nodeValue });
+//     //       // h.appendChild(
+//     //       //   document.createTextNode(" " + next.firstChild.nodeValue)
+//     //       // );
+//     //     }
+//     //     next = next.nextSibling;
+//     //   }
+//     //   t.value += ">";
+//     //   // h.appendChild(document.createTextNode(">"));
+//     //   if (next && next.tagName == "inner") {
+//     //     if (next.firstChild) {
+//     //       t.value += next.firstChild.nodeValue;
+//     //       // h.appendChild(document.createTextNode(next.firstChild.nodeValue));
+//     //     }
+//     //   }
+//     //   t.value += `</${extname}>`;
+//     //   // h.appendChild(document.createTextNode("</" + extname + ">"));
+//     //   break;
+//     // }
+//     // For unrecognized cases of the ext tag, let it run into the default
+//     default:
+//       if (node.nodeType != 3) {
+//         // Something we don't parse, so just represent it literally
+//         t = { type: "", children: [], value: "" };
+//         // h = document.createElement("span");
+//         // h.className = "dt-node";
+//         t.value = `${node.tagName}`;
+//         if (node.childNodes.length == 0) {
+//           // h.appendChild(document.createTextNode("<" + node.tagName + "/>"));
+//         } else {
+//           // t.value += `<${node.tagName}>`;
+//           //  h.appendChild(
+//           //   document.createTextNode("<" + node.tagName + ">")
+//           // );
+//           t.childNodes.forEach(c => treeFromAST_r(c));
+//           // for (i = 0; i < node.childNodes.length; i++) {
+//           //   h.appendChild(htmlFromAST_r(node.childNodes[i]));
+//           // }
+//           // h.appendChild(document.createTextNode("</" + node.tagName + ">"));
+//         }
+//       } else if (node.nodeValue === null || node.nodeValue === undefined) {
+//         t = null;
+//         // h = document.createTextNode("");
+//       } else {
+//         // Plain old text
+//         t = { type: "", value: node.nodeValue };
+//         // h = textWithLinebreaks(node.nodeValue, "dt-node dt-node-multiline");
+//       }
+//       break;
+//   }
+//   return t;
+// }
 
 /**
  * Recursive entry point to construct the DOM tree from a <template> AST node.
@@ -1025,6 +1350,80 @@ function htmlFromAST_r_template(node) {
   span = document.createElement("span");
   var aid = nindex++;
   span.setAttribute("id", "dt-id-" + aid);
+
+  var pipeIds = [];
+  for (i = 1; i < node.childNodes.length; i++) {
+    var pspan = document.createElement("span");
+    var pid = nindex++;
+    pspan.setAttribute("id", "dt-id-" + pid);
+    pipeIds.push(pid);
+    pspan.appendChild(document.createTextNode("|"));
+    span.appendChild(pspan);
+    span.appendChild(htmlFromAST_r(node.childNodes[i]));
+  }
+  h.appendChild(span);
+  espans.push(span);
+
+  // Closing braces
+  span = document.createElement("span");
+  var outid = nindex++;
+  span.setAttribute("id", "dt-id-" + outid);
+  span.appendChild(document.createTextNode("}}"));
+  h.appendChild(span);
+  espans.push(span);
+
+  // Record ids so the emphasize listener can find all the right pieces
+  var pipeList = pipeIds.join(" ");
+  for (i = 0; i < espans.length; i++) {
+    espans[i].setAttribute("dt-emph-template-out", outid);
+    espans[i].setAttribute("dt-emph-template-in", inid);
+    espans[i].setAttribute("dt-emph-template-name", nid);
+    espans[i].setAttribute("dt-emph-template-args", aid);
+    espans[i].setAttribute("dt-emph-template-pipes", pipeList);
+    espans[i].addEventListener("mouseover", emphasizeTemplate);
+    espans[i].addEventListener("mouseout", emphasizeTemplate);
+  }
+  return h;
+}
+
+function treeFromAST_r_template(node) {
+  let t = { type: "Template", children: [] };
+  var i;
+  // Give the input AST node a unique number
+  // node.id = xindex++;
+
+  // A <template> has a <title> followed by a list of <part>s for the arguments
+  var espans = [];
+  // var h = document.createElement("span");
+  // h.className = "dt-node dt-node-template";
+  // var tid = nindex++;
+  // h.setAttribute("id", "dt-id-" + tid);
+
+  // The opening braces
+  // var span = document.createElement("span");
+  // span.appendChild(document.createTextNode("{{"));
+  // var inid = nindex++;
+  // span.setAttribute("id", "dt-id-" + inid);
+  // h.appendChild(span);
+  // espans.push(span);
+
+  // Record the mapping in the global nTox array
+  // nTox["dt-id-" + inid] = node.id;
+  // span.addEventListener("click", evalText, false);
+
+  // The template name
+  t.children.push(treeFromAST_r(node.firstChild));
+  // span = document.createElement("span");
+  // var nid = nindex++;
+  // span.setAttribute("id", "dt-id-" + nid);
+  // span.appendChild(htmlFromAST_r(node.firstChild));
+  // h.appendChild(span);
+  // espans.push(span);
+
+  // A span for all arguments
+  // span = document.createElement("span");
+  // var aid = nindex++;
+  // span.setAttribute("id", "dt-id-" + aid);
 
   var pipeIds = [];
   for (i = 1; i < node.childNodes.length; i++) {
