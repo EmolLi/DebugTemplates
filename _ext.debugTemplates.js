@@ -428,7 +428,6 @@ function apiParse(t, title, url, callback) {
   //debugNote("Action is "+action);
   doPost(url, args, callback);
 }
-
 /**
  * Asks the wiki API to parse the given text into wikitext.
  *
