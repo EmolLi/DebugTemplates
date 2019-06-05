@@ -1,9 +1,21 @@
 /**
  * JS code for all the interactive parts of the special page
  *
- * @author Clark Verbrugge
+ * @author Clark Verbrugge, Duan Li
  * @license CC BY-SA 3.0
  **/
+const corsProxy = "https://gentle-taiga-41562.herokuapp.com/";
+function getUrl(url) {
+  if (new URL(url).hostname != "localhost") {
+    // cors
+    return corsProxy + url;
+  }
+  return url;
+}
+// enums
+const NODE_TYPE = {
+  template: "template"
+};
 let root = document.getElementById("debug-template-debugger");
 
 let libs = [
@@ -50,20 +62,22 @@ function loadjs(file, type = "text/javascript") {
 }
 
 Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
-  const { Row, Col, Input, PageHeader, Typography, Button, Tree } = antd;
+  const { Row, Col, Input, PageHeader, Typography, Button, Tree, Icon } = antd;
   const { TextArea, Search } = Input;
   const { Title, Paragraph, Text } = Typography;
   const { TreeNode } = Tree;
 
   class App extends React.Component {
     state = {
-      src: "test",
+      src: "",
       treeView: null,
-      result: "This is the result.. sdfasfvc dsfsdds",
+      result: "",
       errors: "",
       title: "",
       url: "http://localhost/mediawiki-1.32.1/api.php",
-      homePageUrl: "http://localhost/mediawiki-1.32.1/index.php"
+      homePageUrl: "http://localhost/mediawiki-1.32.1/index.php",
+      stepIntoTemplateButtonDisabled: true,
+      selectedTemplate: ""
       // checkedList: defaultCheckedList,
       // indeterminate: true,
       // checkAll: false
@@ -91,9 +105,10 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
       apiParse(src, title, url, (k, t) => {
         if (k == "OK") {
           var result = window.JSON.parse(t);
-          if (result.expandtemplates && result.expandtemplates.parsetree) {
-            let ast = result.expandtemplates.parsetree
-              ? getXMLParser()(result.expandtemplates.parsetree)
+          if (result.parse && result.parse.parsetree) {
+            debugger;
+            let ast = result.parse.parsetree["*"]
+              ? getXMLParser()(result.parse.parsetree["*"])
               : null;
             nindex = 0;
             let treeView = simplifyAst(ast.children[0]);
@@ -132,20 +147,26 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
         this.getParseTree();
       }
     };
-    onSelect = (selectedKeys, info) => {
+    treeNodeOnSelect = (selectedKeys, info) => {
+      // jump to template source
+      let node = info.node;
+      // debugger;
+      if (node.props.title == "template") {
+        this.setState({ stepIntoTemplateButtonDisabled: false });
+        // this.setState({title: node.})
+      } else {
+        this.setState({ stepIntoTemplateButtonDisabled: true });
+      }
+      // debugger;
       console.log("selected", selectedKeys, info);
-    };
-
-    onCheck = (checkedKeys, info) => {
-      console.log("onCheck", checkedKeys, info);
     };
 
     generateTreeNode(node) {
       return (
         <TreeNode
-          title={`${node.type ? node.type : ""} ${
-            node.value ? node.value : ""
-          }`}
+          title={`${node.type ? node.type : ""}${
+            node.type && node.value ? " " : ""
+          }${node.value ? node.value : ""}`}
           key={node.id}
         >
           {node.children.length > 0 &&
@@ -163,7 +184,7 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
           </Title>
           <div id="debugger-tree-view-content">
             {treeView && (
-              <Tree onSelect={this.onSelect} onCheck={this.onCheck}>
+              <Tree onSelect={this.treeNodeOnSelect}>
                 {this.generateTreeNode(treeView)}
               </Tree>
             )}
@@ -174,7 +195,15 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
 
     // {errors && <Text type="danger">{errors}</Text>}
     render() {
-      const { src, title, result, url, homePageUrl, errors } = this.state;
+      const {
+        src,
+        title,
+        result,
+        url,
+        homePageUrl,
+        errors,
+        stepIntoTemplateButtonDisabled
+      } = this.state;
       return (
         <Row>
           <Col span={12}>
@@ -212,11 +241,19 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
           </Col>
           <Col span={12}>
             <div id="debugger-debugging-pane" className="debugger-section">
-              <Title level={4}>
+              <Title className="debugger-section-title" level={4}>
                 Debugging Pane
-                <Button id="start-debug" type="primary" onClick={this.debug}>
-                  Debug
-                </Button>
+                <Button
+                  onClick={this.debug}
+                  disabled={stepIntoTemplateButtonDisabled}
+                  type="primary"
+                  icon="vertical-align-bottom"
+                />
+                <Button
+                  onClick={this.debug}
+                  type="primary"
+                  icon="caret-right"
+                />
               </Title>
               <div>
                 <div id="debugger-result">
@@ -357,7 +394,7 @@ function setOutput(x) {
  **/
 function doPost(url, params, callback) {
   var x = new XMLHttpRequest();
-  x.open("POST", url, true);
+  x.open("POST", getUrl(url), true);
   x.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
   // x.setRequestHeader("Content-length", params.length);
   // x.setRequestHeader("Connection", "close");
@@ -383,7 +420,7 @@ function doPost(url, params, callback) {
  * @param {function} callback Receives 1 or 2 args with the JSON-encoded result, as per doPost.
  **/
 function apiParse(t, title, url, callback) {
-  var args = "action=expandtemplates&format=json&prop=parsetree";
+  var args = "action=parse&format=json&prop=parsetree";
   if (title) {
     args = args + "&title=" + encodeURIComponent(title);
   }
@@ -411,7 +448,9 @@ function apiEval(t, title, url, callback) {
 }
 
 async function apiGetSource(title, homePageUrl) {
-  let response = await fetch(`${homePageUrl}/Template:${title}?action=raw`);
+  let response = await fetch(
+    getUrl(`${homePageUrl}/Template:${title}?action=raw`)
+  );
   content = await response.text();
   if (!response.ok) {
     if (response.status == 404) throw new Error(`Template ${title} not found.`);
@@ -428,7 +467,7 @@ async function apiGetSource(title, homePageUrl) {
  * @return {boolean}
  **/
 function apiEvalHasResult(result) {
-  if (result.expandtemplates && result.expandtemplates.wikitext !== undefined) {
+  if (result.parse && result.parse.parsetree !== undefined) {
     return true;
   } else if (result.expandframe && result.expandframe.result !== undefined) {
     return true;
@@ -445,8 +484,8 @@ function apiEvalHasResult(result) {
  * @return {string}
  **/
 function apiEvalGetResult(result) {
-  if (result.expandtemplates && result.expandtemplates.wikitext !== undefined) {
-    return result.expandtemplates.wikitext;
+  if (result.parse && result.parse.parsetree !== undefined) {
+    return result.parse.parsetree;
   }
   return result.expandframe.result;
 }
