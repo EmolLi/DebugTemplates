@@ -69,7 +69,7 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
 
   class App extends React.Component {
     state = {
-      src: "",
+      src: "{{{{{a}}}}}",
       treeView: null,
       result: "",
       errors: "",
@@ -77,7 +77,10 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
       url: "http://localhost/mediawiki-1.32.1/api.php",
       homePageUrl: "http://localhost/mediawiki-1.32.1/index.php",
       stepIntoTemplateButtonDisabled: true,
-      selectedTemplate: ""
+      selectedTemplate: "",
+      editIntput: true,
+      inputHighlight: null,
+      unmatchedBracket: []
       // checkedList: defaultCheckedList,
       // indeterminate: true,
       // checkAll: false
@@ -106,12 +109,14 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
         if (k == "OK") {
           var result = window.JSON.parse(t);
           if (result.parse && result.parse.parsetree) {
-            debugger;
             let ast = result.parse.parsetree["*"]
               ? getXMLParser()(result.parse.parsetree["*"])
               : null;
             nindex = 0;
-            let treeView = simplifyAst(ast.children[0]);
+            let treeView = getAst(ast.children[0]);
+            let unmatchedBracket = mapAstToSrc(treeView, src);
+            debugger;
+
             this.setState({ treeView: treeView, errors: "" });
             console.log(treeView);
             // updateFromXML(result.expandtemplates.parsetree, newparams);
@@ -133,9 +138,9 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
       if (!title) return;
       try {
         let src = await apiGetSource(title, this.state.homePageUrl);
-        this.setState({ errors: "", src });
+        this.setState({ errors: "", src, inputHighlight: null });
       } catch (err) {
-        this.setState({ src: "", errors: err.message });
+        this.setState({ src: "", errors: err.message, inputHighlight: null });
       }
     };
 
@@ -143,21 +148,24 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
       if (!this.state.src) {
         this.setState({ treeView: null, result: "", errors: "" });
       } else {
+        this.setState({ editIntput: false });
         this.evalResult();
         this.getParseTree();
       }
     };
     treeNodeOnSelect = (selectedKeys, info) => {
       // jump to template source
-      let node = info.node;
-      // debugger;
-      if (node.props.title == "template") {
+      debugger;
+      let { start, end, title } = info.node.props.node;
+      if (start != undefined && end != undefined) {
+        this.setState({ inputHighlight: [start, end] });
+      }
+      if (title == "template") {
         this.setState({ stepIntoTemplateButtonDisabled: false });
         // this.setState({title: node.})
       } else {
         this.setState({ stepIntoTemplateButtonDisabled: true });
       }
-      // debugger;
       console.log("selected", selectedKeys, info);
     };
 
@@ -168,6 +176,7 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
             node.type && node.value ? " " : ""
           }${node.value ? node.value : ""}`}
           key={node.id}
+          node={node}
         >
           {node.children.length > 0 &&
             node.children.map(c => this.generateTreeNode(c))}
@@ -193,6 +202,81 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
       );
     }
 
+    inputTextWithHighlight() {
+      const { src, inputHighlight } = this.state;
+      if (!inputHighlight) return <Text>{src}</Text>;
+      return (
+        <React.Fragment>
+          {inputHighlight[0] > 0 && (
+            <Text disabled>{src.substring(0, inputHighlight[0])}</Text>
+          )}
+          <Text>{src.substring(inputHighlight[0], inputHighlight[1] + 1)}</Text>
+          {inputHighlight[1] < src.length - 1 && (
+            <Text disabled>{src.substring(inputHighlight[1] + 1)}</Text>
+          )}
+        </React.Fragment>
+      );
+    }
+
+    InputSection() {
+      const {
+        src,
+        title,
+        result,
+        url,
+        homePageUrl,
+        errors,
+        stepIntoTemplateButtonDisabled,
+        editIntput
+      } = this.state;
+      return (
+        <div id="debugger-input" className="debugger-section">
+          <Title level={4}>Input</Title>
+          <Input
+            placeholder="API URL"
+            value={url}
+            onChange={e => this.setState({ url: e.target.value })}
+          />
+          <Input
+            placeholder="Home Page URL"
+            value={homePageUrl}
+            onChange={e => this.setState({ homePageUrl: e.target.value })}
+          />
+          <Search
+            placeholder="Template Title"
+            value={title}
+            onChange={e => this.setState({ title: e.target.value })}
+            onSearch={this.getTemplateSource}
+            enterButton
+          />
+          <div>
+            <Title className="debugger-title" level={4} type="secondary">
+              Source
+              <Button
+                onClick={() => this.setState({ editIntput: true })}
+                disabled={editIntput}
+                type="primary"
+                icon="edit"
+              />
+            </Title>
+            {editIntput ? (
+              <TextArea
+                value={src}
+                id="debugger-input-textarea"
+                onChange={e =>
+                  this.setState({ src: e.target.value, inputHighlight: null })
+                }
+              />
+            ) : (
+              <div id="debugger-input-textarea">
+                {this.inputTextWithHighlight()}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
     // {errors && <Text type="danger">{errors}</Text>}
     render() {
       const {
@@ -207,31 +291,7 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
       return (
         <Row>
           <Col span={12}>
-            <div id="debugger-input" className="debugger-section">
-              <Title level={4}>Input</Title>
-              <Input
-                placeholder="API URL"
-                value={url}
-                onChange={e => this.setState({ url: e.target.value })}
-              />
-              <Input
-                placeholder="Home Page URL"
-                value={homePageUrl}
-                onChange={e => this.setState({ homePageUrl: e.target.value })}
-              />
-              <Search
-                placeholder="Template Title"
-                value={title}
-                onChange={e => this.setState({ title: e.target.value })}
-                onSearch={this.getTemplateSource}
-                enterButton
-              />
-              <TextArea
-                id="debugger-input-textarea"
-                value={src}
-                onChange={e => this.setState({ src: e.target.value })}
-              />
-            </div>
+            {this.InputSection()}
             <div id="debugger-errors" className="debugger-section">
               <Title level={4}>Errors</Title>
               <div id="debugger-errors-content">
@@ -241,7 +301,10 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
           </Col>
           <Col span={12}>
             <div id="debugger-debugging-pane" className="debugger-section">
-              <Title className="debugger-section-title" level={4}>
+              <Title
+                className="debugger-section-title debugger-title"
+                level={4}
+              >
                 Debugging Pane
                 <Button
                   onClick={this.debug}
@@ -996,7 +1059,7 @@ function htmlFromAST(ast) {
   }
 }
 
-function simplifyAst(node) {
+function getAst(node) {
   if (!node) return null;
   let n = {
     type: node.tagName,
@@ -1004,8 +1067,124 @@ function simplifyAst(node) {
     children: [],
     id: nindex++
   };
-  node.childNodes.forEach(c => n.children.push(simplifyAst(c)));
+  node.childNodes.forEach(c => n.children.push(getAst(c)));
   return n;
+}
+
+function mapAstToSrc(ast, src) {
+  debugger;
+
+  let { templatesAndParams, unmatchedBracket } = extractTemplatesAndParams(ast);
+
+  let stack_ast = [];
+  let stack_src = [];
+  let ast_i = 0;
+  let src_i = 0;
+
+  while (ast_i < templatesAndParams.length) {
+    stack_ast.push(templatesAndParams[ast_i]);
+    curr = templatesAndParams[ast_i];
+    ast_i++;
+    let { expectedStart, expectedEnd, expectedStartLen } = getExpectedPattern(
+      curr
+    );
+
+    // match start
+    while (src_i < src.length) {
+      if (src.substr(src_i, expectedStartLen) == expectedStart) {
+        curr.start = src_i;
+        src_i += expectedStartLen;
+        break;
+      }
+      src_i++;
+    }
+
+    if (expectedEnd == "") {
+      stack_ast.splice(stack_ast.length - 1, 1); // pop
+      if (stack_ast.length == 0) continue;
+      curr = stack_ast[stack_ast.length - 1];
+      ({ expectedStart, expectedEnd, expectedStartLen } = getExpectedPattern(
+        curr
+      ));
+    }
+
+    // match ends
+    while (src_i < src.length) {
+      let c = src.charAt(src_i);
+      if (c == "{") break; // match next
+      if (c == "}") {
+        if (src.substr(src_i, expectedStartLen) != expectedEnd) {
+          debugger;
+          console.log("error!!");
+        }
+        curr.end = src_i + expectedStartLen - 1;
+        src_i += expectedStartLen;
+        stack_ast.splice(stack_ast.length - 1, 1); // pop
+        if (stack_ast.length == 0) break;
+        curr = stack_ast[stack_ast.length - 1];
+        ({ expectedStart, expectedEnd, expectedStartLen } = getExpectedPattern(
+          curr
+        ));
+      } else src_i++;
+    }
+  }
+  console.log(templatesAndParams);
+  return unmatchedBracket;
+}
+
+function extractTemplatesAndParams(ast) {
+  let templatesAndParams = [];
+  let unmatchedBracket = [];
+
+  let stack_tree_explore = [];
+  stack_tree_explore.push(ast);
+  let curr;
+  while (stack_tree_explore.length > 0) {
+    curr = stack_tree_explore.splice(stack_tree_explore.length - 1)[0];
+    if (curr.type == "template" || curr.type == "tplarg")
+      templatesAndParams.push(curr);
+    if (curr.value) {
+      let unmacthed = includesUnmatchedBracket(curr.value);
+      if (unmacthed) {
+        unmatchedBracket = [...unmatchedBracket, ...unmacthed];
+        templatesAndParams = [...templatesAndParams, ...unmacthed];
+      }
+    }
+    if (!curr.children) continue;
+    for (let j = curr.children.length - 1; j >= 0; j--) {
+      stack_tree_explore.push(curr.children[j]);
+    }
+  }
+  return { templatesAndParams, unmatchedBracket };
+}
+
+function getExpectedPattern(node) {
+  let expectedStart = "";
+  let expectedEnd = "";
+  let expectedStartLen = 0;
+
+  if (node.type == "template") {
+    expectedStart = "{{";
+    expectedEnd = "}}";
+  } else if (curr.type == "tplarg") {
+    expectedStart = "{{{";
+    expectedEnd = "}}}";
+  } else if (curr.type == "unmatchedBracket") {
+    expectedStart = curr.value;
+    expectedEnd = "";
+  }
+  expectedStartLen = expectedStart.length;
+  return { expectedEnd, expectedStart, expectedStartLen };
+}
+
+function includesUnmatchedBracket(str) {
+  let unmatched = [];
+  for (let i = 0; i < str.length; i++) {
+    let c = str.charAt(i);
+    if (c == "{" || c == "}")
+      unmatched.push({ type: "unmatchedBracket", value: c });
+  }
+  if (unmatched.length > 0) return unmatched;
 }
 /**
  * Recursive entry point to construct the DOM tree from the AST.
