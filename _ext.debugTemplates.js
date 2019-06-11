@@ -69,7 +69,7 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
 
   class App extends React.Component {
     state = {
-      src: "{{{{{a}}}}}",
+      src: "{{Test}}",
       treeView: null,
       result: "",
       errors: "",
@@ -77,7 +77,7 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
       url: "http://localhost/mediawiki-1.32.1/api.php",
       homePageUrl: "http://localhost/mediawiki-1.32.1/index.php",
       stepIntoTemplateButtonDisabled: true,
-      selectedTemplate: "",
+      selectedNode: null,
       editIntput: true,
       inputHighlight: null,
       unmatchedBracket: []
@@ -85,8 +85,8 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
       // indeterminate: true,
       // checkAll: false
     };
-    evalResult() {
-      const { src, title, url } = this.state;
+    evalResult(src = this.state.src, title = this.state.title) {
+      const { url } = this.state;
       apiEval(src, title, url, (k, t) => {
         if (k == "OK") {
           var result = window.JSON.parse(t);
@@ -144,6 +144,34 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
       }
     };
 
+    stepIntoTemplate = () => {
+      const { selectedNode, url, src } = this.state;
+      if (selectedNode.type != "template") {
+        debugger;
+        console.log("eeeeee");
+      }
+      let titleNode = selectedNode.children[0];
+      let titleSrc = src.substring(
+        selectedNode.children[0].start,
+        selectedNode.children[0].end + 1
+      );
+
+      apiEval(titleSrc, "", url, (k, t) => {
+        if (k == "OK") {
+          var result = window.JSON.parse(t);
+          if (apiEvalHasResult(result)) {
+            let title = apiEvalGetResult(result);
+            this.getTemplateSource(title);
+            this.setState({ title });
+          } else {
+            this.setState({ errors: t });
+          }
+        } else {
+          this.setState({ errors: k });
+        }
+      });
+    };
+
     debug = () => {
       if (!this.state.src) {
         this.setState({ treeView: null, result: "", errors: "" });
@@ -156,11 +184,13 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
     treeNodeOnSelect = (selectedKeys, info) => {
       // jump to template source
       debugger;
-      let { start, end, title } = info.node.props.node;
+      this.setState({ selectedNode: info.node.props.node });
+      let { start, end, type } = info.node.props.node;
       if (start != undefined && end != undefined) {
         this.setState({ inputHighlight: [start, end] });
       }
-      if (title == "template") {
+      if (type == "root") this.setState({ inputHighlight: null });
+      if (type == "template") {
         this.setState({ stepIntoTemplateButtonDisabled: false });
         // this.setState({title: node.})
       } else {
@@ -307,7 +337,7 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
               >
                 Debugging Pane
                 <Button
-                  onClick={this.debug}
+                  onClick={this.stepIntoTemplate}
                   disabled={stepIntoTemplateButtonDisabled}
                   type="primary"
                   icon="vertical-align-bottom"
@@ -1111,13 +1141,24 @@ function mapAstToSrc(ast, src) {
     // match ends
     while (src_i < src.length) {
       let c = src.charAt(src_i);
-      if (c == "{") break; // match next
-      if (c == "}") {
+      // title
+      if (curr.type == "template" && !curr.children[0].start && c == "|") {
+        curr.children[0].start = curr.start + 2;
+        curr.children[0].end = src_i - 1;
+        src_i++;
+      } else if (c == "{") break;
+      // match next
+      else if (c == "}") {
         if (src.substr(src_i, expectedStartLen) != expectedEnd) {
           debugger;
           console.log("error!!");
         }
         curr.end = src_i + expectedStartLen - 1;
+        // title
+        if (curr.type == "template" && !curr.children[0].start) {
+          curr.children[0].start = curr.start + 2;
+          curr.children[0].end = src_i - 1;
+        }
         src_i += expectedStartLen;
         stack_ast.splice(stack_ast.length - 1, 1); // pop
         if (stack_ast.length == 0) break;
