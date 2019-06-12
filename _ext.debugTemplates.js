@@ -80,7 +80,8 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
       selectedNode: null,
       editIntput: true,
       inputHighlight: null,
-      unmatchedBracket: []
+      unmatchedBracket: [],
+      stepHistory: [{ title: "Main" }]
       // checkedList: defaultCheckedList,
       // indeterminate: true,
       // checkAll: false
@@ -91,7 +92,10 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
         if (k == "OK") {
           var result = window.JSON.parse(t);
           if (apiEvalHasResult(result)) {
-            this.setState({ errors: "", result: apiEvalGetResult(result) });
+            this.setState({
+              errors: "",
+              result: apiEvalGetResult(result)
+            });
           } else {
             this.setState({ errors: t });
             // setBusy(false);
@@ -145,7 +149,7 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
     };
 
     stepIntoTemplate = () => {
-      const { selectedNode, url, src } = this.state;
+      const { selectedNode, url, src, stepHistory } = this.state;
       if (selectedNode.type != "template") {
         debugger;
         console.log("eeeeee");
@@ -162,7 +166,11 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
           if (apiEvalHasResult(result)) {
             let title = apiEvalGetResult(result);
             this.getTemplateSource(title);
-            this.setState({ title });
+            stepHistory[stepHistory.length - 1].src = src;
+            this.setState({
+              title,
+              stepHistory: [...stepHistory, { title }]
+            });
           } else {
             this.setState({ errors: t });
           }
@@ -170,6 +178,18 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
           this.setState({ errors: k });
         }
       });
+    };
+
+    navigateInHistory = index => () => {
+      let { stepHistory } = this.state;
+      if (!stepHistory[index].src) return;
+      this.setState(
+        {
+          src: stepHistory[index].src,
+          stepHistory: stepHistory.splice(0, index + 1)
+        },
+        () => this.debug()
+      );
     };
 
     debug = () => {
@@ -247,7 +267,7 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
         </React.Fragment>
       );
     }
-
+    src;
     InputSection() {
       const {
         src,
@@ -316,6 +336,7 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
         url,
         homePageUrl,
         errors,
+        stepHistory,
         stepIntoTemplateButtonDisabled
       } = this.state;
       return (
@@ -348,6 +369,18 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
                   icon="caret-right"
                 />
               </Title>
+              {stepHistory.length > 1 && (
+                <div className="non-padding-section">
+                  {stepHistory.map((h, i) => (
+                    <React.Fragment key={i}>
+                      {i > 0 && <Icon type="right" />}
+                      <Button type="link" onClick={this.navigateInHistory(i)}>
+                        {h.title}
+                      </Button>
+                    </React.Fragment>
+                  ))}
+                </div>
+              )}
               <div>
                 <div id="debugger-result">
                   <Title level={4} type="secondary">
