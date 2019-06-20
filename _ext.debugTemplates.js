@@ -69,7 +69,7 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
 
   class App extends React.Component {
     state = {
-      src: "{{Test}}",
+      src: "{{Test|p1={p2|p}=22}|o3={dd}|d{=p3|ddd}}",
       treeView: null,
       result: "",
       errors: "",
@@ -119,19 +119,22 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
             nindex = 0;
             let treeView = getAst(ast.children[0]);
             let unmatchedBracket = mapAstToSrc(treeView, src);
-            debugger;
 
-            this.setState({ treeView: treeView, errors: "" });
+            this.setState({ treeView: treeView, errors: "", unmatchedBracket });
             console.log(treeView);
             // updateFromXML(result.expandtemplates.parsetree, newparams);
           } else {
             // updateFromXML("");
             if (!result.error || result.error.code != "notext")
-              this.setState({ treeView: null, errors: t });
+              this.setState({
+                treeView: null,
+                unmatchedBracket: [],
+                errors: t
+              });
             // debugNote(mw.message("debugtemplates-error-parse") + " " + t);
           }
         } else {
-          this.setState({ treeView: null, errors: k });
+          this.setState({ treeView: null, unmatchedBracket: [], errors: k });
           // updateFromXML("");
           // debugNote(mw.message("debugtemplates-error-parse") + " " + k);
         }
@@ -327,6 +330,36 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
       );
     }
 
+    ErrorSection = () => {
+      const { errors, unmatchedBracket } = this.state;
+
+      return (
+        <div id="debugger-errors" className="debugger-section">
+          <Title level={4}>Errors</Title>
+          <div id="debugger-errors-content">
+            {errors && (
+              <Text type="danger">
+                Error: {errors}
+                <br />
+              </Text>
+            )}
+            {unmatchedBracket.length > 0 &&
+              unmatchedBracket.map((b, i) => (
+                <Text
+                  type="warning"
+                  key={i}
+                  onClick={() =>
+                    this.setState({ inputHighlight: [b.start, b.start] })
+                  }
+                >
+                  Warning: unmacthed bracket {b.value}
+                  <br />
+                </Text>
+              ))}
+          </div>
+        </div>
+      );
+    };
     // {errors && <Text type="danger">{errors}</Text>}
     render() {
       const {
@@ -343,12 +376,7 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
         <Row>
           <Col span={12}>
             {this.InputSection()}
-            <div id="debugger-errors" className="debugger-section">
-              <Title level={4}>Errors</Title>
-              <div id="debugger-errors-content">
-                {errors && <Text type="danger">Error: {errors}</Text>}
-              </div>
-            </div>
+            {this.ErrorSection()}
           </Col>
           <Col span={12}>
             <div id="debugger-debugging-pane" className="debugger-section">
@@ -1135,15 +1163,42 @@ function getAst(node) {
 }
 
 function mapAstToSrc(ast, src) {
-  debugger;
-
   let { templatesAndParams, unmatchedBracket } = extractTemplatesAndParams(ast);
-
+  console.log(templatesAndParams);
+  debugger;
   let stack_ast = [];
   let stack_src = [];
   let ast_i = 0;
   let src_i = 0;
+  /*
+  function parseTemplateParts() {
+    if (templatesAndParams[ast_i].type != "part") console.log("ERRR");
 
+    curr = templatesAndParams[ast_i++];
+    stack_ast.push(curr);
+    curr.start = src_i;
+
+    curr = templatesAndParams[ast_i++];
+    if (curr.type != "name") console.log("errr");
+    stack_ast.push(curr);
+    curr.start = src_i;
+
+    if (curr.children.length == 0) {
+      curr.end = src_i - 1;
+      stack_ast.splice(stack_ast.length - 1, 1);
+
+      curr = templatesAndParams[ast_i++];
+      stack_ast.push(curr);
+      if (curr.type != "value") console.log("333eeeeee");
+      if (c == "=") src_i++;
+      curr.start = src_i;
+      if (curr.children. == 0)
+      ({ expectedStart, expectedEnd, expectedStartLen } = getExpectedPattern(
+        curr
+      ));
+    }
+  }
+*/
   while (ast_i < templatesAndParams.length) {
     stack_ast.push(templatesAndParams[ast_i]);
     curr = templatesAndParams[ast_i];
@@ -1154,7 +1209,15 @@ function mapAstToSrc(ast, src) {
 
     // match start
     while (src_i < src.length) {
-      if (src.substr(src_i, expectedStartLen) == expectedStart) {
+      if (expectedStartLen == -1) {
+        // non-empty name/value in part
+        curr.start = src_i;
+        break;
+      }
+      if (
+        expectedStartLen >= 0 &&
+        src.substr(src_i, expectedStartLen) == expectedStart
+      ) {
         curr.start = src_i;
         src_i += expectedStartLen;
         break;
@@ -1162,9 +1225,10 @@ function mapAstToSrc(ast, src) {
       src_i++;
     }
 
-    if (expectedEnd == "") {
+    if (curr.type == "unmatchedBracket" || expectedStartLen == 0) {
+      // unmatched bracket, empty name/ value in part
       stack_ast.splice(stack_ast.length - 1, 1); // pop
-      if (stack_ast.length == 0) continue;
+      if (stack_ast.length == 0) break;
       curr = stack_ast[stack_ast.length - 1];
       ({ expectedStart, expectedEnd, expectedStartLen } = getExpectedPattern(
         curr
@@ -1174,17 +1238,136 @@ function mapAstToSrc(ast, src) {
     // match ends
     while (src_i < src.length) {
       let c = src.charAt(src_i);
+      // if (
+      //   (curr.type == "name" || curr.type == "value") &&
+      //   curr.children.length == 0
+      // ) {
+      //   curr.end = src_i - 1;
+      //   stack_ast.splice(stack_ast.length - 1, 1);
+      //
+      //   curr = templatesAndParams[ast_i++];
+      //   stack_ast.push(curr);
+      //
+      //   continue;
+      // }
+
+      if (curr.type == "part" || curr.type == "value") {
+        let prev =
+          stack_ast[
+            curr.type == "part" ? stack_ast.length - 2 : stack_ast.length - 3
+          ];
+        let prevPattern = getExpectedPattern(prev);
+        // part && template/ argument finished
+        if (
+          src.substr(src_i, prevPattern.expectedStartLen) ==
+          prevPattern.expectedEnd
+        ) {
+          curr.end = src_i - 1;
+          stack_ast.splice(stack_ast.length - 1, 1); // pop
+          curr = prev;
+          ({ expectedStart, expectedEnd, expectedStartLen } = prevPattern);
+          continue;
+        }
+        // internal part finished
+        else if (
+          c == "|" &&
+          templatesAndParams[ast_i] &&
+          templatesAndParams[ast_i].type == "part"
+        ) {
+          curr.end = src_i - 1;
+          stack_ast.splice(stack_ast.length - 1, 1); // pop
+          break;
+        }
+        // part unfinished
+        else if (curr.type == "part") break;
+        else if (curr.type == "value") {
+          src_i++;
+          continue;
+        }
+      } else if (curr.type == "name" && c == "=") {
+        curr.end = src_i - 1;
+        stack_ast.splice(stack_ast.length - 1, 1); // pop
+        break;
+      }
+      // if (curr.type == "part" && (!templatesAndParams[ast] || ))
       // title
-      if (curr.type == "template" && !curr.children[0].start && c == "|") {
+      else if (curr.type == "template" && !curr.children[0].start && c == "|") {
         curr.children[0].start = curr.start + 2;
         curr.children[0].end = src_i - 1;
         src_i++;
+
+        // params
+        // if (templatesAndParams[ast_i].type != "part") {
+        //   console.log("ERRR");
+        //   debugger;
+        // }
+        //
+        // curr = templatesAndParams[ast_i++];
+        // stack_ast.push(curr);
+        // curr.start = src_i;
+        //
+        // curr = templatesAndParams[ast_i++];
+        // if (curr.type != "name") {
+        //   console.log("errr");
+        //   debugger;
+        // }
+        // stack_ast.push(curr);
+        // curr.start = src_i;
+        // if (curr.children.length == 0) {
+        //   curr.end = src_i - 1;
+        //   stack_ast.splice(stack_ast.length - 1, 1);
+        //
+        //   curr = templatesAndParams[ast_i++];
+        //   stack_ast.push(curr);
+        //   if (curr.type != "value") console.log("333eeeeee");
+        //   if (c == "=") src_i++;
+        //   curr.start = src_i;
+        //   ({
+        //     expectedStart,
+        //     expectedEnd,
+        //     expectedStartLen
+        //   } = getExpectedPattern(curr));
+        //   continue;
+        // }
+        src_i++;
+      } else if (c == "=" && curr.type == "name") {
+        //   curr.end = src_i - 1;
+        //   stack_ast.splice(stack_ast.length - 1, 1); // pop
+        //
+        //   curr = templatesAndParams[ast_i++];
+        //   stack_ast.push(curr);
+        //   if (curr.type != "value") console.log("333eeeeee");
+        //   curr.start = ++src_i;
+        //   ({ expectedStart, expectedEnd, expectedStartLen } = getExpectedPattern(
+        //     curr
+        //   ));
+        //   continue;
+        // } else if (c == "|" && curr.type == "value") {
+        //   curr.end = src_i - 1;
+        //   stack_ast.splice(stack_ast.length - 1, 1);
+        //   curr = templatesAndParams[ast_i++];
+        //   stack_ast.push(curr);
+        //   if (curr.type != "part") console.log("333eeeeee");
       } else if (c == "{") break;
       // match next
       else if (c == "}") {
+        if (curr.type == "part") {
+        }
         if (src.substr(src_i, expectedStartLen) != expectedEnd) {
-          debugger;
-          console.log("error!!");
+          // debugger;
+          if (templatesAndParams[ast_i].type == "unmatchedBracket") break;
+          console.log("err");
+          // if (curr.type == "value" || curr.type == "part") {
+          //   curr.end = src_i - 1;
+          //   stack_ast.splice(stack_ast.length - 1, 1); // pop
+          //   curr = stack_ast[stack_ast.length - 1];
+          //   ({
+          //     expectedStart,
+          //     expectedEnd,
+          //     expectedStartLen
+          //   } = getExpectedPattern(curr));
+          //   continue;
+          // }
         }
         curr.end = src_i + expectedStartLen - 1;
         // title
@@ -1202,7 +1385,9 @@ function mapAstToSrc(ast, src) {
       } else src_i++;
     }
   }
+  debugger;
   console.log(templatesAndParams);
+  // debugger;
   return unmatchedBracket;
 }
 
@@ -1215,13 +1400,23 @@ function extractTemplatesAndParams(ast) {
   let curr;
   while (stack_tree_explore.length > 0) {
     curr = stack_tree_explore.splice(stack_tree_explore.length - 1)[0];
-    if (curr.type == "template" || curr.type == "tplarg")
+    if (
+      curr.type == "template" ||
+      curr.type == "tplarg" ||
+      curr.type == "part" ||
+      curr.type == "name" ||
+      curr.type == "value"
+    )
       templatesAndParams.push(curr);
     if (curr.value) {
-      let unmacthed = includesUnmatchedBracket(curr.value);
-      if (unmacthed) {
-        unmatchedBracket = [...unmatchedBracket, ...unmacthed];
-        templatesAndParams = [...templatesAndParams, ...unmacthed];
+      if (curr.value == "=") {
+        templatesAndParams.push({ ...curr, type: "assignmentSign" });
+      } else {
+        let unmacthed = includesUnmatchedBracket(curr.value);
+        if (unmacthed) {
+          unmatchedBracket = [...unmatchedBracket, ...unmacthed];
+          templatesAndParams = [...templatesAndParams, ...unmacthed];
+        }
       }
     }
     if (!curr.children) continue;
@@ -1247,7 +1442,34 @@ function getExpectedPattern(node) {
     expectedStart = curr.value;
     expectedEnd = "";
   }
+  switch (node.type) {
+    case "template":
+      expectedStart = "{{";
+      expectedEnd = "}}";
+      break;
+    case "tplarg":
+      expectedStart = "{{{";
+      expectedEnd = "}}}";
+      break;
+    case "unmatchedBracket":
+      expectedStart = curr.value;
+      expectedEnd = "";
+      break;
+    case "part":
+      expectedStart = "|";
+      expectedEnd = "";
+      break;
+    default:
+      break;
+  }
+
   expectedStartLen = expectedStart.length;
+  if (
+    (node.type == "name" || node.type == "value") &&
+    node.children.length != 0
+  ) {
+    expectedStartLen = -1;
+  }
   return { expectedEnd, expectedStart, expectedStartLen };
 }
 
