@@ -54,7 +54,6 @@ function loadjs(file, type = "text/javascript") {
     }
     fileref.onload = function() {
       console.log("LOADED: " + file);
-      // console.log(ReactDOM);
       resolve();
     };
     document.body.appendChild(fileref);
@@ -62,11 +61,33 @@ function loadjs(file, type = "text/javascript") {
 }
 
 Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
-  const { Row, Col, Input, PageHeader, Typography, Button, Tree, Icon } = antd;
+  const {
+    Row,
+    Col,
+    Input,
+    Table,
+    PageHeader,
+    Typography,
+    Button,
+    Tree,
+    Icon
+  } = antd;
   const { TextArea, Search } = Input;
   const { Title, Paragraph, Text } = Typography;
   const { TreeNode } = Tree;
 
+  const paramsTableColumn = [
+    {
+      title: "Name",
+      dataIndex: "name",
+      key: "name"
+    },
+    {
+      title: "Value",
+      dataIndex: "value",
+      key: "value"
+    }
+  ];
   class App extends React.Component {
     state = {
       src: "{{Test|p1={p2|p}=22}|o3={dd}|d{=p3|ddd}}",
@@ -81,31 +102,22 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
       editIntput: true,
       inputHighlight: null,
       unmatchedBracket: [],
-      stepHistory: [{ title: "Main" }]
-      // checkedList: defaultCheckedList,
-      // indeterminate: true,
-      // checkAll: false
+      stepHistory: [{ title: "Main", params: [] }],
+      params: []
     };
-    evalResult(src = this.state.src, title = this.state.title) {
+    evalResult = async (src = this.state.src, title = this.state.title) => {
+      debugger;
       const { url } = this.state;
-      apiEval(src, title, url, (k, t) => {
-        if (k == "OK") {
-          var result = window.JSON.parse(t);
-          if (apiEvalHasResult(result)) {
-            this.setState({
-              errors: "",
-              result: apiEvalGetResult(result)
-            });
-          } else {
-            this.setState({ errors: t });
-            // setBusy(false);
-          }
-        } else {
-          this.setState({ errors: k });
-          // setBusy(false);
-        }
-      });
-    }
+      try {
+        let result = await apiEvalAsync(src, title, url);
+        this.setState({
+          errors: "",
+          result: result
+        });
+      } catch (e) {
+        this.setState({ errors: e.message });
+      }
+    };
 
     getParseTree() {
       const { src, title, url } = this.state;
@@ -151,44 +163,59 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
       }
     };
 
-    stepIntoTemplate = () => {
+    stepIntoTemplate = async () => {
       const { selectedNode, url, src, stepHistory } = this.state;
       if (selectedNode.type != "template") {
         debugger;
         console.log("eeeeee");
       }
+      debugger;
       let titleNode = selectedNode.children[0];
       let titleSrc = src.substring(
         selectedNode.children[0].start,
         selectedNode.children[0].end + 1
       );
 
-      apiEval(titleSrc, "", url, (k, t) => {
-        if (k == "OK") {
-          var result = window.JSON.parse(t);
-          if (apiEvalHasResult(result)) {
-            let title = apiEvalGetResult(result);
-            this.getTemplateSource(title);
-            stepHistory[stepHistory.length - 1].src = src;
-            this.setState({
-              title,
-              stepHistory: [...stepHistory, { title }]
-            });
-          } else {
-            this.setState({ errors: t });
+      let params = [];
+      try {
+        for (let i = 1; i < selectedNode.children.length; i++) {
+          debugger;
+          let p = {};
+          let param = selectedNode.children[i];
+          let name = param.children[0];
+          let value = param.children[param.children.length - 1];
+          if (name.start && name.end) {
+            p.nameSrc = src.substring(name.start, name.end + 1);
+            p.name = await apiEvalAsync(p.nameSrc, "", url);
+          } else continue;
+          if (value.start && value.end) {
+            p.valueSrc = src.substring(value.start, value.end + 1);
+            p.value = await apiEvalAsync(p.valueSrc, "", url);
           }
-        } else {
-          this.setState({ errors: k });
+          params.push(p);
         }
-      });
+
+        let title = await apiEvalAsync(titleSrc, "", url);
+        this.getTemplateSource(title);
+        stepHistory[stepHistory.length - 1].src = src;
+        this.setState({
+          title,
+          stepHistory: [...stepHistory, { title, params }],
+          params
+        });
+      } catch (e) {
+        this.setState({ errors: e.message });
+      }
     };
 
-    navigateInHistory = index => () => {
-      let { stepHistory } = this.state;
+    navigateInHistory = index => async () => {
+      let { stepHistory, src, url } = this.state;
+      debugger;
       if (!stepHistory[index].src) return;
       this.setState(
         {
           src: stepHistory[index].src,
+          params: stepHistory[index].params,
           stepHistory: stepHistory.splice(0, index + 1)
         },
         () => this.debug()
@@ -200,10 +227,13 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
         this.setState({ treeView: null, result: "", errors: "" });
       } else {
         this.setState({ editIntput: false });
+
+        debugger;
         this.evalResult();
         this.getParseTree();
       }
     };
+
     treeNodeOnSelect = (selectedKeys, info) => {
       // jump to template source
       debugger;
@@ -360,7 +390,24 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
         </div>
       );
     };
-    // {errors && <Text type="danger">{errors}</Text>}
+
+    ParamsTable = () => {
+      const { params } = this.state;
+      if (params.length == 0) return null;
+      return (
+        <div>
+          <Title level={4} type="secondary">
+            Parameters
+          </Title>
+          <Table
+            columns={paramsTableColumn}
+            dataSource={params}
+            size="small"
+            pagination={false}
+          />
+        </div>
+      );
+    };
     render() {
       const {
         src,
@@ -370,7 +417,8 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
         homePageUrl,
         errors,
         stepHistory,
-        stepIntoTemplateButtonDisabled
+        stepIntoTemplateButtonDisabled,
+        params
       } = this.state;
       return (
         <Row>
@@ -409,6 +457,7 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
                   ))}
                 </div>
               )}
+              {this.ParamsTable()}
               <div>
                 <div id="debugger-result">
                   <Title level={4} type="secondary">
@@ -595,9 +644,29 @@ function apiEval(t, title, url, callback) {
     args = args + "&title=" + encodeURIComponent(title);
   }
   args = args + "&text=" + encodeURIComponent(t);
-  // args = args + "&frame=" + encodeURIComponent(assembleParams());
+  // args = args + "&frame=" + encodeURIComponent(JSON.stringify({ p1: "hellodd" });
   // debugNote("Action is "+args);
   doPost(url, args, callback);
+}
+
+async function apiEvalAsync(src, title, url) {
+  let args = "action=expandframe&format=json";
+  if (title) {
+    args = args + "&title=" + encodeURIComponent(title);
+  }
+  args = args + "&text=" + encodeURIComponent(src);
+  // args = args + "&frame=" + encodeURIComponent(JSON.stringify({ p1: "hellodd" });
+  let response = await fetch(getUrl(url), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Api-User-Agent": "DebugTemplatesExtension/1.0"
+    },
+    body: args
+  });
+  let result = await response.json();
+  if (!response.ok) throw new Error(response.status + content);
+  return result.expandframe.result;
 }
 
 async function apiGetSource(title, homePageUrl) {
