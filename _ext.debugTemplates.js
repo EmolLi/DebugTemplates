@@ -90,7 +90,8 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
   ];
   class App extends React.Component {
     state = {
-      src: "{{Test|p1={p2|p}=22}|o3={dd}|d{=p3|ddd}}",
+      src:
+        "{{Test|p1={{Test|p2=ddd}}}} {{Test|p1={p2|p}=22}|o3={dd}|d{=p3|ddd}}",
       treeView: null,
       result: "",
       errors: "",
@@ -103,13 +104,14 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
       inputHighlight: null,
       unmatchedBracket: [],
       stepHistory: [{ title: "Main", params: [] }],
-      params: []
+      params: [{ name: "p1", value: "DUAN" }]
     };
     evalResult = async (src = this.state.src, title = this.state.title) => {
-      debugger;
-      const { url } = this.state;
+      const { url, params } = this.state;
+      console.log(params, "   params");
       try {
-        let result = await apiEvalAsync(src, title, url);
+        debugger;
+        let result = await apiEvalAsync(src, title, url, params);
         this.setState({
           errors: "",
           result: result
@@ -157,7 +159,7 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
       if (!title) return;
       try {
         let src = await apiGetSource(title, this.state.homePageUrl);
-        this.setState({ errors: "", src, inputHighlight: null });
+        await this.setState({ errors: "", src, inputHighlight: null });
       } catch (err) {
         this.setState({ src: "", errors: err.message, inputHighlight: null });
       }
@@ -166,10 +168,8 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
     stepIntoTemplate = async () => {
       const { selectedNode, url, src, stepHistory } = this.state;
       if (selectedNode.type != "template") {
-        debugger;
         console.log("eeeeee");
       }
-      debugger;
       let titleNode = selectedNode.children[0];
       let titleSrc = src.substring(
         selectedNode.children[0].start,
@@ -179,7 +179,6 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
       let params = [];
       try {
         for (let i = 1; i < selectedNode.children.length; i++) {
-          debugger;
           let p = {};
           let param = selectedNode.children[i];
           let name = param.children[0];
@@ -196,13 +195,22 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
         }
 
         let title = await apiEvalAsync(titleSrc, "", url);
-        this.getTemplateSource(title);
+        await this.getTemplateSource(title);
         stepHistory[stepHistory.length - 1].src = src;
-        this.setState({
-          title,
-          stepHistory: [...stepHistory, { title, params }],
-          params
-        });
+        this.setState(
+          {
+            title,
+            stepHistory: [
+              ...stepHistory,
+              {
+                title,
+                params
+              }
+            ],
+            params
+          },
+          () => this.debug()
+        );
       } catch (e) {
         this.setState({ errors: e.message });
       }
@@ -210,7 +218,6 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
 
     navigateInHistory = index => async () => {
       let { stepHistory, src, url } = this.state;
-      debugger;
       if (!stepHistory[index].src) return;
       this.setState(
         {
@@ -236,7 +243,6 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
 
     treeNodeOnSelect = (selectedKeys, info) => {
       // jump to template source
-      debugger;
       this.setState({ selectedNode: info.node.props.node });
       let { start, end, type } = info.node.props.node;
       if (start != undefined && end != undefined) {
@@ -487,105 +493,14 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
 
 // For indexing the displayed HTML nodes with unique numbers used in highlighting.
 var nindex = 0;
-// Array of parameter representations.  Each is an object with name and row fields.
-var params = [];
 // For indexexing AST nodes with unique numbers.
 var xindex = 0;
 // Mapping from nindex to xindex.
 var nTox = [];
 // Root of the AST.
 var ast;
-// Array of things done for undoing.  Each entry is a string or an array of strings.
-var lastUndo = [];
-// Stack of previous states (frames) from descending into templates.
-var nestingStack = [];
-// A flag used to help debounce.
-var busy = false;
-
-// Constant: maximum length of the lastUndo array.
-var maxUndos = 1000;
-// Constant: timeout interval in ms used in making sequences of API calls.
+// Array of things done for undoing.  Each entry is a string or an array of strings.// Constant: timeout interval in ms used in making sequences of API calls.
 var apiCallInterval = 30;
-// Constant: the checkmark symbol used for a set parameter.
-var argy = "\u2714";
-// Constant: the x symbol used for an unset parameter.
-var argn = "\u2718";
-// Constant: symbol used to represent the initial frame in the crumbs list.
-var firstcrumb = "\u2a00";
-// Constant: symbol used to represent the link from one crumb to another
-var nextCrumb = "\u27ff";
-
-// A reference to the undo button, to avoid having to look it up each time.
-var undoButtonNode;
-// A reference to the undo-all button, to avoid having to look it up each time.
-var resetButtonNode;
-
-/**
- * ******************
- * Utility functions.
- * ******************
- **/
-
-/**
- * Adds the given string to the error message area.
- *
- * @param {string} s
- *
- **/
-function debugNote(s) {
-  debugNoteHTML(document.createTextNode(s));
-}
-
-/**
- * Adds the given dom structure to the error message area.
- *
- * Also ensures length does not exceed a bound, and installs a clear button on the first message.
- *
- * @param {HTMLElement} s
- **/
-function debugNoteHTML(s) {
-  var d = document.getElementById("dt-error");
-  while (d.childNodes.length > 10) {
-    d.removeChild(d.firstChild.nextSibling);
-  }
-  if (!document.getElementById("dt-error-button")) {
-    var b = document.createElement("input");
-    b.type = "button";
-    b.id = "dt-error-button";
-    b.value = mw.message("debugtemplates-error-button");
-    b.className = "dt-error-button";
-    b.addEventListener("click", debugNoteClear, false);
-    d.appendChild(b);
-  }
-  d.appendChild(s);
-  d.appendChild(document.createElement("br"));
-}
-
-/**
- * Clear the debug message area.
- **/
-function debugNoteClear() {
-  var d = document.getElementById("dt-error");
-  while (d.childNodes.length > 0) {
-    d.removeChild(d.firstChild);
-  }
-}
-
-/**
- * Set the output pane to something, discarding all previous content.
- *
- * @param {HTMLElement|null} x
- **/
-function setOutput(x) {
-  debugNoteClear();
-  var dout = document.getElementById("dt-output");
-  while (dout.hasChildNodes()) {
-    dout.removeChild(dout.lastChild);
-  }
-  if (x) {
-    dout.appendChild(x);
-  }
-}
 
 /**
  * Perform a POST operation.
@@ -649,13 +564,19 @@ function apiEval(t, title, url, callback) {
   doPost(url, args, callback);
 }
 
-async function apiEvalAsync(src, title, url) {
+async function apiEvalAsync(src, title, url, params) {
   let args = "action=expandframe&format=json";
   if (title) {
     args = args + "&title=" + encodeURIComponent(title);
   }
   args = args + "&text=" + encodeURIComponent(src);
-  // args = args + "&frame=" + encodeURIComponent(JSON.stringify({ p1: "hellodd" });
+  if (params && params.length > 0) {
+    let p = {};
+    params.forEach(k => (p[k.name] = k.value));
+    console.log(p);
+    args = args + "&frame=" + encodeURIComponent(JSON.stringify(p));
+    console.log(args);
+  }
   let response = await fetch(getUrl(url), {
     method: "POST",
     headers: {
@@ -778,127 +699,6 @@ function textWithLinebreaks(txt, cname) {
     h.appendChild(document.createTextNode(s[i]));
   }
   return h;
-}
-
-/**
- * Determines in which mode a mouse-click should be interpretted.
- *
- * @return {string} One of "nothing", "eval", or "descend".
- **/
-function getMouseClickMode() {
-  if (document.getElementById("dt-radio-eval").checked) {
-    return "eval";
-  }
-  if (document.getElementById("dt-radio-descend").checked) {
-    return "descend";
-  }
-  return "nothing";
-}
-
-/**
- * Set or unset the busy flag
- *
- * A true flag indicates that a potentially long, asynchronous operation is in place and other ones should
- * not be allowed to proceed until it is done.
- *
- * @param {boolean} b
- **/
-function setBusy(b) {
-  if (b && !busy) {
-    busy = true;
-    document.getElementById("dt-output").classList.add("dt-busy");
-  } else if (!b && busy) {
-    busy = false;
-    document.getElementById("dt-output").classList.remove("dt-busy");
-  }
-}
-
-/**
- * A fancy fade-in effect to make where text is replaced real obvious.
- *
- * @param {HTMLElement} p The element to apply it to.
- **/
-function fader(p) {
-  // We will create a padding that shrinks over time. This is the initial padding.
-  var bp = "12";
-  p.style.padding = bp + "px";
-  p.classList.add("dt-fading");
-  var intervaltag = window.setInterval(function() {
-    var c = parseInt(p.style.padding, 10);
-    c--;
-    if (c <= 0) {
-      if (intervaltag) {
-        window.clearInterval(intervaltag);
-      }
-      intervaltag = null;
-      p.style.padding = "";
-      p.classList.remove("dt-fading");
-    } else {
-      p.style.padding = String(c) + "px";
-    }
-  }, 50);
-}
-
-/**
- * Gathers current parameter definitions and assembles them into a JSON string.
- *
- * @return {string} A JSON-encoded object
- **/
-function assembleParams() {
-  var argtable = document.getElementById("dt-argtable");
-  var tbody = argtable.getElementsByTagName("tbody");
-  if (tbody) {
-    tbody = tbody[0];
-  } else {
-    // If there is no tbody then there are no args
-    return "{}";
-  }
-  var pobj = {};
-
-  for (var i = 0; i < tbody.rows.length; i++) {
-    var celln = tbody.rows[i].cells[1].firstChild;
-    var cellv = tbody.rows[i].cells[2].firstChild;
-    if (cellv.classList.contains("dt-arg-set-yes")) {
-      pobj[celln.nodeValue] = cellv.value;
-    }
-  }
-  return window.JSON.stringify(pobj);
-}
-
-/**
- * ***************************************
- * Creating the debug pane and param list.
- * ***************************************
- **/
-
-/**
- * Main update routine to process changed input text.
- *
- * @param {string} text The new input text to process.
- * @param {Object|null} newparams An optional set of parameters and their defined values which should be
- *  included in the list of input parameters constructed.
- **/
-function updateFromNewInput(text, newparams) {
-  setBusy(false);
-  if (text === "") {
-    updateFromXML("");
-  } else {
-    apiParse(text, function(k, t) {
-      if (k == "OK") {
-        var result = window.JSON.parse(t);
-        if (result.expandtemplates && result.expandtemplates.parsetree) {
-          updateFromXML(result.expandtemplates.parsetree, newparams);
-        } else {
-          updateFromXML("");
-          if (!result.error || result.error.code != "notext")
-            debugNote(mw.message("debugtemplates-error-parse") + " " + t);
-        }
-      } else {
-        updateFromXML("");
-        debugNote(mw.message("debugtemplates-error-parse") + " " + k);
-      }
-    });
-  }
 }
 
 /**
@@ -1234,7 +1034,6 @@ function getAst(node) {
 function mapAstToSrc(ast, src) {
   let { templatesAndParams, unmatchedBracket } = extractTemplatesAndParams(ast);
   console.log(templatesAndParams);
-  debugger;
   let stack_ast = [];
   let stack_src = [];
   let ast_i = 0;
