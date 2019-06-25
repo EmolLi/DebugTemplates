@@ -197,6 +197,10 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
         let title = await apiEvalAsync(titleSrc, "", url);
         await this.getTemplateSource(title);
         stepHistory[stepHistory.length - 1].src = src;
+        stepHistory[stepHistory.length - 1].command = src.substring(
+          selectedNode.start,
+          selectedNode.end + 1
+        );
         this.setState(
           {
             title,
@@ -258,6 +262,9 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
     };
 
     generateTreeNode(node) {
+      const { type, value, id, children } = node;
+      // type = formatType(type);
+      // value = format(value)
       return (
         <TreeNode
           title={`${node.type ? node.type : ""}${
@@ -396,6 +403,33 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
       );
     };
 
+    CallStackSection = () => {
+      const { stepHistory } = this.state;
+      if (stepHistory.length <= 1) return null;
+      return (
+        <div id="debugger-call-stack">
+          <Title level={4} type="secondary">
+            Call Stack
+          </Title>
+          <div className="non-padding-section">
+            {stepHistory.map((h, i) => (
+              <React.Fragment key={i}>
+                {i > 0 && <Icon type="right" />}
+                <Button type="link" onClick={this.navigateInHistory(i)}>
+                  {h.title}
+                </Button>
+              </React.Fragment>
+            ))}
+          </div>
+          {stepHistory.slice(0, stepHistory.length - 1).map((h, i) => (
+            <Typography>
+              <strong>{h.title}</strong>: {h.command}
+            </Typography>
+          ))}
+        </div>
+      );
+    };
+
     ParamsTable = () => {
       const { params } = this.state;
       if (params.length == 0) return null;
@@ -450,18 +484,7 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
                   icon="caret-right"
                 />
               </Title>
-              {stepHistory.length > 1 && (
-                <div className="non-padding-section">
-                  {stepHistory.map((h, i) => (
-                    <React.Fragment key={i}>
-                      {i > 0 && <Icon type="right" />}
-                      <Button type="link" onClick={this.navigateInHistory(i)}>
-                        {h.title}
-                      </Button>
-                    </React.Fragment>
-                  ))}
-                </div>
-              )}
+              {this.CallStackSection()}
               {this.ParamsTable()}
               <div>
                 <div id="debugger-result">
@@ -484,6 +507,21 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
   ReactDOM.render(<App />, root);
 });
 
+// fucntion formatType(type) {
+//       if (!type) return "";
+//       switch (type) {
+//         case "part":
+//           return "parameter";
+//         case "tplarg":
+//           return "argument";
+//         default:
+//         return type
+//       }
+//     }
+//     function formatValue(value) {
+//       if (value == " ") return "[SPACE]";
+//       return value ? value : "";
+//     }
 /**
  * *************************
  * Global variables section.
