@@ -33,7 +33,7 @@
   height: 400px;
 }
 #debugger-errors {
-  height: 150px;
+  min-height: 150px;
 }
 
 #debugger-debugging-pane {
@@ -45,7 +45,7 @@
 }
 
 #debugger-result {
-  height: 200px;
+  min-height: 200px;
 }
 
 /* The debug bar for reporting error messages. */

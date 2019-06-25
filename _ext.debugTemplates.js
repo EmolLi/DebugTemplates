@@ -104,7 +104,7 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
       inputHighlight: null,
       unmatchedBracket: [],
       stepHistory: [{ title: "Main", params: [] }],
-      params: [{ name: "p1", value: "DUAN" }]
+      params: []
     };
     evalResult = async (src = this.state.src, title = this.state.title) => {
       const { url, params } = this.state;
@@ -235,7 +235,6 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
       } else {
         this.setState({ editIntput: false });
 
-        debugger;
         this.evalResult();
         this.getParseTree();
       }
@@ -1034,6 +1033,7 @@ function getAst(node) {
 function mapAstToSrc(ast, src) {
   let { templatesAndParams, unmatchedBracket } = extractTemplatesAndParams(ast);
   console.log(templatesAndParams);
+  debugger;
   let stack_ast = [];
   let stack_src = [];
   let ast_i = 0;
@@ -1084,6 +1084,15 @@ function mapAstToSrc(ast, src) {
       let c = src.charAt(src_i);
 
       if (curr.type == "part" || curr.type == "value") {
+        // part unfinished
+        if (
+          curr.type == "part" &&
+          templatesAndParams[ast_i] &&
+          (templatesAndParams[ast_i].type == "name" ||
+            templatesAndParams[ast_i].type == "value")
+        )
+          break;
+
         let prev =
           stack_ast[
             curr.type == "part" ? stack_ast.length - 2 : stack_ast.length - 3
@@ -1119,8 +1128,6 @@ function mapAstToSrc(ast, src) {
           }
           break;
         }
-        // part unfinished
-        else if (curr.type == "part") break;
       }
       if (curr.type == "name" && c == "=") {
         curr.end = src_i - 1;
@@ -1129,8 +1136,12 @@ function mapAstToSrc(ast, src) {
       }
       // if (curr.type == "part" && (!templatesAndParams[ast] || ))
       // title
-      else if (curr.type == "template" && !curr.children[0].start && c == "|") {
-        curr.children[0].start = curr.start + 2;
+      else if (
+        (curr.type == "template" || curr.type == "tplarg") &&
+        !curr.children[0].start &&
+        c == "|"
+      ) {
+        curr.children[0].start = curr.start + expectedStartLen;
         curr.children[0].end = src_i - 1;
         break;
       } else if (c == "{") break;
