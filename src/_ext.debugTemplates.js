@@ -172,7 +172,6 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
 
     evalResult = async (src = this.state.src, title = this.state.title) => {
       const { url, params } = this.state;
-      console.log(params, "   params");
       try {
         let result = await apiEvalAsync(src, title, url, params);
         this.setState({
@@ -198,7 +197,6 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
             let unmatchedBracket = mapAstToSrc(treeView, src);
             await parserExtensions(treeView, src, extensions, url);
             debugger;
-            console.log(1, treeView);
             this.setState({ treeView: treeView, errors: "", unmatchedBracket });
             // updateFromXML(result.expandtemplates.parsetree, newparams);
           } else {
@@ -318,7 +316,6 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
       } else {
         this.setState({ stepIntoTemplateButtonDisabled: true });
       }
-      console.log("selected", selectedKeys, info);
     };
 
     generateTreeNode(node) {
@@ -661,9 +658,7 @@ async function apiEvalAsync(src, title, url, params) {
   if (params && params.length > 0) {
     let p = {};
     params.forEach(k => (p[k.name] = k.value));
-    console.log(p);
     args = args + "&frame=" + encodeURIComponent(JSON.stringify(p));
-    console.log(args);
   }
   let response = await fetch(getUrl(url), {
     method: "POST",
@@ -1244,7 +1239,6 @@ function mapAstToSrc(ast, src) {
             templatesAndParams[ast_i].type == "unmatchedBracket"
           )
             break;
-          console.log("err");
         }
         curr.end = src_i + expectedStartLen - 1;
         // title
@@ -1359,40 +1353,73 @@ async function parserExtensions(ast, src, extensions, url, warnings = []) {
   // let title = await apiEvalAsync(titleSrc, "", url);
 }
 
-const supportedParserFunctions = [
-  "#expr:",
-  "#if:",
-  "#ifeq:",
-  "#iferror:",
-  "#ifexpr:",
-  "#ifexist:",
-  "#rel2abs:",
-  "#switch:",
-  "#time:",
-  "#titleparts:"
-];
+const supportedParserFunctions = {
+  "#expr:": "#expr:",
+  "#if:": "#if:",
+  "#ifeq:": "#ifeq:",
+  "#iferror:": "#iferror:",
+  "#ifexpr:": "#ifexpr:",
+  "#ifexist:": "#ifexist:",
+  "#rel2abs:": "#rel2abs:",
+  "#switch:": "#switch:",
+  "#time:": "#time:",
+  "#titleparts:": "#titleparts:"
+};
 async function parserExtParserFunctions(ast, src, url, warnings) {
   if (ast.type == "template") {
     debugger;
     let title = (await getTitle(ast.children[0], url, src)).trim();
-    console.log(title);
-    for (let func of supportedParserFunctions) {
-      console.log(title.substr(0, func.length));
+    for (let func in supportedParserFunctions) {
       if (title.substr(0, func.length) == func) {
-        console.log("yyyyy");
-        await parserFunc(func, ast, src, url, warnings);
+        await _parserFunc(func, ast, src, url, warnings);
         break;
       }
     }
   }
   await Promise.all(
     ast.children.map(async c => {
-      console.log(c, 33);
       await parserExtParserFunctions(c, src, url, warnings);
     })
   );
 }
 
+const parserFunctionsConfigs = {
+  "#expr:": { argCnt: 1 },
+  "#if:": {
+    argCnt: 3,
+    nodeType: "if",
+    titleNodeType: "if expression",
+    otherNodeTypes: ["then", "else"]
+  },
+  "#ifeq:": {
+    argCnt: 4,
+    nodeType: "if equal",
+    titleNodeType: "if string 1 equals",
+    otherNodeTypes: ["string 2", "then", "else"]
+  },
+  "#iferror:": {
+    argCnt: 3,
+    nodeType: "if",
+    titleNodeType: "if exp is erroneous",
+    otherNodeTypes: ["then", "else"]
+  },
+  "#ifexpr:": { argCnt: 3 },
+  "#ifexist:": { argCnt: 3 }, //{{#ifexist: page title | value if exists | value if doesn't exist }}
+  "#rel2abs:": { argCntLE: 2 }, //{{#rel2abs: path }} {{#rel2abs: path | base path }}
+  "#switch:": {}, //{{#switch: comparison string
+  //| case = result
+  //| case = result
+  //| ...
+  //| case = result
+  //| default result
+  //}}
+
+  "#time:": { argCntLE: 4 }, //{{#time: format string }}
+  //{{#time: format string | date/time object }}
+  //{{#time: format string | date/time object | language code }}
+  //{{#time: format string | date/time object | language code | local }}
+  "#titleparts:": { argCnt: 3 } //{{#titleparts: pagename | number of segments to return | first segment to return }}
+};
 function parsePartToParamForparserFunc(branch) {
   let oc = branch.children;
   branch.children = [...oc[0].children];
@@ -1414,6 +1441,45 @@ function parsePartToParamForparserFunc(branch) {
   }
 }
 
+async function _parserFunc(func, ast, src, url, warnings) {
+  let titleNode = ast.children[0];
+  let title = (await getTitle(titleNode, url, src)).trim();
+  let titleExpStr = title.substring(func.length);
+
+  titleNode._str = titleExpStr;
+  let titleExpEval = await apiEvalAsync(titleExpStr, "", url);
+  titleNode._eval = titleExpEval;
+
+  let config = parserFunctionsConfigs[func];
+  ast.type = config.nodeType;
+  titleNode.type = config.titleNodeType;
+
+  // check param number
+  if (config.argCnt && ast.children.length != config.argCnt) {
+    warnings.push({
+      start: ast.start,
+      end: ast.end,
+      warning: `${func} function has ${
+        ast.children.length
+      } arguments, it should have ${config.argCnt} arguments.`
+    });
+  } else if (config.argCntLE && ast.children.length > config.argCntLE) {
+    warnings.push({
+      start: ast.start,
+      end: ast.end,
+      warning: `${func} function has ${
+        ast.children.length
+      } arguments, it should have at most ${config.argCntLE} arguments.`
+    });
+  }
+  debugger;
+  for (let i = 0; i < config.otherNodeTypes.length; i++) {
+    let child = ast.children[i + 1];
+    if (!child) break;
+    child.type = config.otherNodeTypes[i];
+    parsePartToParamForparserFunc(child);
+  }
+}
 async function parserFunc(func, ast, src, url, warnings) {
   let titleNode = ast.children[0];
   let title = (await getTitle(titleNode, url, src)).trim();
@@ -1491,10 +1557,35 @@ async function parserFunc(func, ast, src, url, warnings) {
       break;
     }
     case "#iferror:": {
+      ast.type = "if error";
+      titleNode.type = "if exp is erroneous";
+
+      if (ast.children.length != 3) {
+        warnings.push({
+          start: ast.start,
+          end: ast.end,
+          warning: `#iferror function has ${
+            ast.children.length
+          } argument(es), it should have 3 arguments: one expression and two branches.`
+        });
+      }
+
+      let branchA = ast.children[1];
+      let branchB = ast.children[2];
+      if (branchA) {
+        branchA.type = "then";
+        // TODO: choose statement
+        parsePartToParamForparserFunc(branchA);
+      }
+      if (branchB) {
+        branchB.type = "else";
+        parsePartToParamForparserFunc(branchB);
+      }
       break;
     }
-    case "#ifexpr:":
+    case "#ifexpr:": {
       break;
+    }
     case "#ifexist:":
       break;
     case "#rel2abs:":
