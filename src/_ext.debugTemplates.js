@@ -107,7 +107,7 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
   // "{{Test|p1={{Test|p2=ddd}}}} {{Test|p1={p2|p}=22}|o3={dd}|d{=p3|ddd}}",
   class App extends React.Component {
     state = {
-      src: "{{#if: a|b|c}}",
+      src: "{{#ifeq: a|b|c|d}}",
       treeView: null,
       result: "",
       errors: "",
@@ -1393,23 +1393,45 @@ async function parserExtParserFunctions(ast, src, url, warnings) {
   );
 }
 
+function parsePartToParamForparserFunc(branch) {
+  let oc = branch.children;
+  branch.children = [...oc[0].children];
+  if (oc.length == 3) {
+    branch.children.push({ id: oc[1].id, value: "=", children: [] });
+    branch.children = [...branch.children, ...oc[2].children];
+  } else if (oc.length == 2)
+    branch.children = [...branch.children, ...oc[1].children];
+
+  // merge
+  let i = 1;
+  while (i < branch.children.length) {
+    let prev = branch.children[i - 1];
+    let curr = branch.children[i];
+    if (prev.value != undefined && curr.value != undefined) {
+      prev.value += curr.value;
+      branch.children.splice(i, 1);
+    } else i++;
+  }
+}
+
 async function parserFunc(func, ast, src, url, warnings) {
+  let titleNode = ast.children[0];
+  let title = (await getTitle(titleNode, url, src)).trim();
+  let titleExpStr = title.substring(func.length);
+
+  titleNode._str = titleExpStr;
+  let titleExpEval = await apiEvalAsync(titleExpStr, "", url);
+  titleNode._eval = titleExpEval;
+
   switch (func) {
     case "#expr:":
       break;
     case "#if:": {
-      let titleNode = ast.children[0];
-      let title = (await getTitle(titleNode, url, src)).trim();
-      let conditionStr = title.substring(func.length);
       ast.type = "if";
-
       titleNode.type = "condition";
-      titleNode._conditionStr = conditionStr;
-      let condition = await apiEvalAsync(conditionStr, "", url);
-      titleNode._evalCondition = condition;
 
       if (ast.children.length != 3) {
-        warning.push({
+        warnings.push({
           start: ast.start,
           end: ast.end,
           warning: `#if function has ${ast.children.length -
@@ -1418,52 +1440,25 @@ async function parserFunc(func, ast, src, url, warnings) {
       }
 
       if (ast.children[1]) {
-        ast.children[1].type = "true branch";
-        if (condition) ast.children[1]._selected = true;
-        reparseBranch(ast.children[1]);
+        ast.children[1].type = "then";
+        if (titleNode._eval) ast.children[1]._selected = true;
+        parsePartToParamForparserFunc(ast.children[1]);
       }
       if (ast.children[2]) {
-        ast.children[2].type = "false branch";
-        if (!condition) ast.children[2]._selected = true;
-        reparseBranch(ast.children[2]);
+        ast.children[2].type = "else";
+        if (!titleNode._eval) ast.children[2]._selected = true;
+        parsePartToParamForparserFunc(ast.children[2]);
       }
 
-      function reparseBranch(branch) {
-        let oc = branch.children;
-        branch.children = [...oc[0].children];
-        if (oc.length == 3) {
-          branch.children.push({ id: oc[1].id, value: "=", children: [] });
-          branch.children = [...branch.children, ...oc[2].children];
-        } else if (oc.length == 2)
-          branch.children = [...branch.children, ...oc[1].children];
-
-        // merge
-        let i = 1;
-        while (i < branch.children.length) {
-          let prev = branch.children[i - 1];
-          let curr = branch.children[i];
-          if (prev.value != undefined && curr.value != undefined) {
-            prev.value += curr.value;
-            branch.children.splice(i, 1);
-          } else i++;
-        }
-      }
       debugger;
       break;
     }
     case "#ifeq:": {
-      let titleNode = ast.children[0];
-      let title = (await getTitle(titleNode, url, src)).trim();
-      let strL = title.substring(func.length);
       ast.type = "if equal";
-
       titleNode.type = "if string 1 equals";
-      titleNode._strL = strL;
-      let evalStrL = await apiEvalAsync(strL, "", url);
-      titleNode._evalStrL = evalStrL;
 
       if (ast.children.length != 4) {
-        warning.push({
+        warnings.push({
           start: ast.start,
           end: ast.end,
           warning: `#ifeq function has ${
@@ -1471,10 +1466,33 @@ async function parserFunc(func, ast, src, url, warnings) {
           } argument(es), it should have 4 arguments: two strings and two branches.`
         });
       }
+
+      let strRNode = ast.children[1];
+      let branchA = ast.children[2];
+      let branchB = ast.children[3];
+      if (strRNode) {
+        // string Right
+        let strR = src.substring(strRNode.start + 1, strRNode.end + 1);
+        let evalStrR = await apiEvalAsync(strR, "", url);
+        strRNode._src = strR;
+        strRNode._eval = evalStrR;
+        strRNode.type = "string 2";
+        parsePartToParamForparserFunc(strRNode);
+      }
+      if (branchA) {
+        branchA.type = "then";
+        // TODO: eval equal
+        parsePartToParamForparserFunc(branchA);
+      }
+      if (branchB) {
+        branchB.type = "else";
+        parsePartToParamForparserFunc(branchB);
+      }
       break;
     }
-    case "#iferror:":
+    case "#iferror:": {
       break;
+    }
     case "#ifexpr:":
       break;
     case "#ifexist:":
