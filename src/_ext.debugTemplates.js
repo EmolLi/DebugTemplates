@@ -5,6 +5,7 @@
  * @license CC BY-SA 3.0
  **/
 
+// FIXME: space, newline in editor
 const corsProxy = "https://gentle-taiga-41562.herokuapp.com/";
 function getUrl(url) {
   if (new URL(url).hostname != "localhost") {
@@ -72,7 +73,8 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
     Button,
     Tree,
     Icon,
-    Collapse
+    Collapse,
+    Checkbox
   } = antd;
   const { TextArea, Search } = Input;
   const { Title, Paragraph, Text } = Typography;
@@ -102,10 +104,10 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
     // overflow: "hidden"
   };
 
+  // "{{Test|p1={{Test|p2=ddd}}}} {{Test|p1={p2|p}=22}|o3={dd}|d{=p3|ddd}}",
   class App extends React.Component {
     state = {
-      src:
-        "{{Test|p1={{Test|p2=ddd}}}} {{Test|p1={p2|p}=22}|o3={dd}|d{=p3|ddd}}",
+      src: "{{#if: a|b|c}}",
       treeView: null,
       result: "",
       errors: "",
@@ -118,11 +120,12 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
       inputHighlight: null,
       unmatchedBracket: [],
       stepHistory: [{ title: "Main", params: [] }],
-      params: []
+      params: [],
+      extensions: { parserFunctions: true }
     };
 
     SettingPanel() {
-      const { url, homePageUrl } = this.state;
+      const { url, homePageUrl, extensions } = this.state;
       return (
         <Collapse
           className="debugger-collapse-section"
@@ -133,7 +136,7 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
           <Panel
             header={
               <Title level={4} type="secondary">
-                Call Stack
+                Settings
               </Title>
             }
             key="1"
@@ -149,6 +152,19 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
               value={homePageUrl}
               onChange={e => this.setState({ homePageUrl: e.target.value })}
             />
+            <Checkbox
+              onChange={e =>
+                this.setState({
+                  extensions: {
+                    ...extensions,
+                    parserFunctions: e.target.checked
+                  }
+                })
+              }
+              checked={extensions.parserFunctions}
+            >
+              Parser Functions
+            </Checkbox>
           </Panel>
         </Collapse>
       );
@@ -158,7 +174,6 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
       const { url, params } = this.state;
       console.log(params, "   params");
       try {
-        debugger;
         let result = await apiEvalAsync(src, title, url, params);
         this.setState({
           errors: "",
@@ -170,8 +185,8 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
     };
 
     getParseTree() {
-      const { src, title, url } = this.state;
-      apiParse(src, title, url, (k, t) => {
+      const { src, title, url, extensions } = this.state;
+      apiParse(src, title, url, async (k, t) => {
         if (k == "OK") {
           var result = window.JSON.parse(t);
           if (result.parse && result.parse.parsetree) {
@@ -181,9 +196,10 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
             nindex = 0;
             let treeView = getAst(ast.children[0]);
             let unmatchedBracket = mapAstToSrc(treeView, src);
-
+            await parserExtensions(treeView, src, extensions, url);
+            debugger;
+            console.log(1, treeView);
             this.setState({ treeView: treeView, errors: "", unmatchedBracket });
-            console.log(treeView);
             // updateFromXML(result.expandtemplates.parsetree, newparams);
           } else {
             // updateFromXML("");
@@ -249,16 +265,12 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
           selectedNode.start,
           selectedNode.end + 1
         );
+        let newHistory = { title, params };
+        stepHistory = [...stepHistory, newHistory];
         this.setState(
           {
             title,
-            stepHistory: [
-              ...stepHistory,
-              {
-                title,
-                params
-              }
-            ],
+            stepHistory,
             params
           },
           () => this.debug()
@@ -1110,7 +1122,6 @@ function getAst(node) {
 function mapAstToSrc(ast, src) {
   let { templatesAndParams, unmatchedBracket } = extractTemplatesAndParams(ast);
   console.log(templatesAndParams);
-  debugger;
   let stack_ast = [];
   let stack_src = [];
   let ast_i = 0;
@@ -1339,6 +1350,153 @@ function includesUnmatchedBracket(str) {
       unmatched.push({ type: "unmatchedBracket", value: c });
   }
   if (unmatched.length > 0) return unmatched;
+}
+
+async function parserExtensions(ast, src, extensions, url, warnings = []) {
+  if (extensions.parserFunctions) {
+    await parserExtParserFunctions(ast, src, url, warnings);
+  }
+  // let title = await apiEvalAsync(titleSrc, "", url);
+}
+
+const supportedParserFunctions = [
+  "#expr:",
+  "#if:",
+  "#ifeq:",
+  "#iferror:",
+  "#ifexpr:",
+  "#ifexist:",
+  "#rel2abs:",
+  "#switch:",
+  "#time:",
+  "#titleparts:"
+];
+async function parserExtParserFunctions(ast, src, url, warnings) {
+  if (ast.type == "template") {
+    debugger;
+    let title = (await getTitle(ast.children[0], url, src)).trim();
+    console.log(title);
+    for (let func of supportedParserFunctions) {
+      console.log(title.substr(0, func.length));
+      if (title.substr(0, func.length) == func) {
+        console.log("yyyyy");
+        await parserFunc(func, ast, src, url, warnings);
+        break;
+      }
+    }
+  }
+  await Promise.all(
+    ast.children.map(async c => {
+      console.log(c, 33);
+      await parserExtParserFunctions(c, src, url, warnings);
+    })
+  );
+}
+
+async function parserFunc(func, ast, src, url, warnings) {
+  switch (func) {
+    case "#expr:":
+      break;
+    case "#if:": {
+      let titleNode = ast.children[0];
+      let title = (await getTitle(titleNode, url, src)).trim();
+      let conditionStr = title.substring(func.length);
+      ast.type = "if";
+
+      titleNode.type = "condition";
+      titleNode._conditionStr = conditionStr;
+      let condition = await apiEvalAsync(conditionStr, "", url);
+      titleNode._evalCondition = condition;
+
+      if (ast.children.length != 3) {
+        warning.push({
+          start: ast.start,
+          end: ast.end,
+          warning: `#if function has ${ast.children.length -
+            1} branch(es), it should have 2 branches.`
+        });
+      }
+
+      if (ast.children[1]) {
+        ast.children[1].type = "true branch";
+        if (condition) ast.children[1]._selected = true;
+        reparseBranch(ast.children[1]);
+      }
+      if (ast.children[2]) {
+        ast.children[2].type = "false branch";
+        if (!condition) ast.children[2]._selected = true;
+        reparseBranch(ast.children[2]);
+      }
+
+      function reparseBranch(branch) {
+        let oc = branch.children;
+        branch.children = [...oc[0].children];
+        if (oc.length == 3) {
+          branch.children.push({ id: oc[1].id, value: "=", children: [] });
+          branch.children = [...branch.children, ...oc[2].children];
+        } else if (oc.length == 2)
+          branch.children = [...branch.children, ...oc[1].children];
+
+        // merge
+        let i = 1;
+        while (i < branch.children.length) {
+          let prev = branch.children[i - 1];
+          let curr = branch.children[i];
+          if (prev.value != undefined && curr.value != undefined) {
+            prev.value += curr.value;
+            branch.children.splice(i, 1);
+          } else i++;
+        }
+      }
+      debugger;
+      break;
+    }
+    case "#ifeq:": {
+      let titleNode = ast.children[0];
+      let title = (await getTitle(titleNode, url, src)).trim();
+      let strL = title.substring(func.length);
+      ast.type = "if equal";
+
+      titleNode.type = "if string 1 equals";
+      titleNode._strL = strL;
+      let evalStrL = await apiEvalAsync(strL, "", url);
+      titleNode._evalStrL = evalStrL;
+
+      if (ast.children.length != 4) {
+        warning.push({
+          start: ast.start,
+          end: ast.end,
+          warning: `#ifeq function has ${
+            ast.children.length
+          } argument(es), it should have 4 arguments: two strings and two branches.`
+        });
+      }
+      break;
+    }
+    case "#iferror:":
+      break;
+    case "#ifexpr:":
+      break;
+    case "#ifexist:":
+      break;
+    case "#rel2abs:":
+      break;
+    case "#switch:":
+      break;
+    case "#time:":
+      break;
+    case "#titleparts:":
+      break;
+    default:
+  }
+}
+// get title value of template/ arg
+async function getTitle(titleNode, url, src) {
+  if (!titleNode._value) {
+    let titleSrc = src.substring(titleNode.start, titleNode.end + 1);
+    titleNode._value = await apiEvalAsync(titleSrc, "", url);
+  }
+  return titleNode._value;
 }
 /**
  * Handler for the parameter eval-all buttons.
