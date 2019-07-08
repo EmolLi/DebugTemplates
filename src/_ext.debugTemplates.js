@@ -5,7 +5,7 @@
  * @license CC BY-SA 3.0
  **/
 
-// FIXME: space, newline in editor
+// TODO: space, newline in editor
 const corsProxy = "https://gentle-taiga-41562.herokuapp.com/";
 function getUrl(url) {
   if (new URL(url).hostname != "localhost") {
@@ -107,7 +107,17 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
   // "{{Test|p1={{Test|p2=ddd}}}} {{Test|p1={p2|p}=22}|o3={dd}|d{=p3|ddd}}",
   class App extends React.Component {
     state = {
-      src: "{{#ifexist: Special:Watchlist | exists | doesn't exist }}",
+      src: `    {{#ifeq: 01 | 1 | equal | not equal}} → equal
+    {{#ifeq: 0 | -0 | equal | not equal}} → equal
+    {{#ifeq: 1e3 | 1000 | equal | not equal}} → equal
+    {{#ifeq: {{#expr:10^3}} | 1000 | equal | not equal}} → equal
+
+Otherwise the comparison is made as text; this comparison is case sensitive:
+
+    {{#ifeq: foo | bar | equal | not equal}} → not equal
+    {{#ifeq: foo | Foo | equal | not equal}} → not equal
+    {{#ifeq: "01" | "1" | equal | not equal}} → not equal  (compare to similar example above, without the quotes)
+    {{#ifeq: 10^3 | 1000 | equal | not equal}} → not equal  `,
       treeView: null,
       result: "",
       errors: "",
@@ -326,7 +336,9 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
         <TreeNode
           title={`${node.type ? node.type : ""}${
             node.type && node.value ? " " : ""
-          }${node.value ? node.value : ""}`}
+          }${node.value ? node.value : ""}${
+            node._eval != undefined ? ` [${node._eval}]` : ""
+          }${node._highlight ? "  <SELECTED>" : ""}`}
           key={node.id}
           node={node}
         >
@@ -1353,6 +1365,7 @@ async function parserExtensions(ast, src, extensions, url, warnings = []) {
   // let title = await apiEvalAsync(titleSrc, "", url);
 }
 
+// grammar rules based on https://www.mediawiki.org/wiki/Help:Extension:ParserFunctions
 const supportedParserFunctions = {
   "#expr:": "#expr:",
   "#if:": "#if:",
@@ -1403,7 +1416,7 @@ const parserFunctionsConfigs = {
     otherNodeTypes: ["string 2", "then", "else"]
   },
   "#iferror:": {
-    argCnt: 3,
+    argCntLE: 3,
     nodeType: "#iferror",
     titleNodeType: "if expr is erroneous",
     otherNodeTypes: ["then", "else"]
@@ -1509,6 +1522,99 @@ async function _parserFunc(func, ast, src, url, warnings) {
     if (!child) break;
     child.type = config.otherNodeTypes[i];
     parsePartToParamForparserFunc(child);
+  }
+
+  // eval each Function
+
+  switch (func) {
+    case "#expr:":
+      break;
+    case "#if:": {
+      let evalResult = titleNode._eval.trim();
+      if (!!evalResult) {
+        if (ast.children[1]) ast.children[1]._highlight = true;
+      } else {
+        if (ast.children[2]) ast.children[2]._highlight = true;
+      }
+      break;
+    }
+    case "#ifeq:": {
+      let strRNode = ast.children[1];
+      if (strRNode) {
+        // string Right
+        let strR = src.substring(strRNode.start + 1, strRNode.end + 1);
+        let evalStrR = await apiEvalAsync(strR, "", url);
+        strRNode._src = strR;
+        strRNode._eval = evalStrR;
+      }
+
+      if (!strRNode) break;
+      let str1 = titleNode._eval.trim();
+      let str2 = strRNode._eval.trim();
+      let evalResult = false;
+      if (str1 == str2) evalResult = true;
+      // If both strings are valid numerical values, the strings are compared numerically.
+      // "^" is XOR in javascript, "10^3" is a valid number in javascript but not in wikitext.
+      else if (str1.indexOf("^") < 0 && str2.indexOf("^") < 0) {
+        let num1 = Number.parseFloat(str1);
+        let num2 = Number.parseFloat(str2);
+        if (!isNaN(num1) && !isNaN(num2) && num1 == num2) evalResult = true;
+      }
+
+      let branchA = ast.children[2];
+      let branchB = ast.children[3];
+      if (evalResult) {
+        if (branchA) branchA._highlight = true;
+      } else {
+        if (branchB) branchB._highlight = true;
+      }
+      break;
+    }
+    case "#iferror:": {
+      let errStr = titleNode._eval.trim();
+      let evalResult = false;
+      if (
+        errStr.indexOf("<") >= 0 &&
+        errStr.indexOf(">") > 11 &&
+        errStr.indexOf("error") > 6 &&
+        errStr.indexOf("class") > 1
+      ) {
+        try {
+          // TODO: is the call blocking?
+          let domNode = getXMLParser()(errStr);
+          if (
+            domNode.childNodes &&
+            domNode.childNodes[0] &&
+            domNode.childNodes[0].classList.contains("error")
+          ) {
+            evalResult = true;
+          }
+        } catch (err) {}
+      }
+      let branchA = ast.children[1];
+      let branchB = ast.children[2];
+      if (evalResult) {
+        if (branchA) branchA._highlight = true;
+      } else {
+        if (branchB) branchB._highlight = true;
+        else titleNode._highlight = true;
+      }
+      break;
+    }
+    case "#ifexpr:": {
+      break;
+    }
+    case "#ifexist:":
+      break;
+    case "#rel2abs:":
+      break;
+    case "#switch:":
+      break;
+    case "#time:":
+      break;
+    case "#titleparts:":
+      break;
+    default:
   }
 }
 async function parserFunc(func, ast, src, url, warnings) {
