@@ -107,7 +107,7 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
   // "{{Test|p1={{Test|p2=ddd}}}} {{Test|p1={p2|p}=22}|o3={dd}|d{=p3|ddd}}",
   class App extends React.Component {
     state = {
-      src: "{{#ifeq: a|b|c|d}}",
+      src: "{{#ifexist: Special:Watchlist | exists | doesn't exist }}",
       treeView: null,
       result: "",
       errors: "",
@@ -1367,8 +1367,8 @@ const supportedParserFunctions = {
 };
 async function parserExtParserFunctions(ast, src, url, warnings) {
   if (ast.type == "template") {
-    debugger;
-    let title = (await getTitle(ast.children[0], url, src)).trim();
+    let title = await getTitle(ast.children[0], url, src);
+    title = title.trim();
     for (let func in supportedParserFunctions) {
       if (title.substr(0, func.length) == func) {
         await _parserFunc(func, ast, src, url, warnings);
@@ -1384,28 +1384,48 @@ async function parserExtParserFunctions(ast, src, url, warnings) {
 }
 
 const parserFunctionsConfigs = {
-  "#expr:": { argCnt: 1 },
+  "#expr:": {
+    argCnt: 1,
+    nodeType: "#expr",
+    titleNodeType: "expr",
+    otherNodeTypes: []
+  },
   "#if:": {
     argCnt: 3,
-    nodeType: "if",
-    titleNodeType: "if expression",
+    nodeType: "#if",
+    titleNodeType: "if expr",
     otherNodeTypes: ["then", "else"]
   },
   "#ifeq:": {
     argCnt: 4,
-    nodeType: "if equal",
+    nodeType: "#ifeq",
     titleNodeType: "if string 1 equals",
     otherNodeTypes: ["string 2", "then", "else"]
   },
   "#iferror:": {
     argCnt: 3,
-    nodeType: "if",
-    titleNodeType: "if exp is erroneous",
+    nodeType: "#iferror",
+    titleNodeType: "if expr is erroneous",
     otherNodeTypes: ["then", "else"]
   },
-  "#ifexpr:": { argCnt: 3 },
-  "#ifexist:": { argCnt: 3 }, //{{#ifexist: page title | value if exists | value if doesn't exist }}
-  "#rel2abs:": { argCntLE: 2 }, //{{#rel2abs: path }} {{#rel2abs: path | base path }}
+  "#ifexpr:": {
+    argCnt: 3,
+    nodeType: "#ifexpr",
+    titleNodeType: "if expr",
+    otherNodeTypes: ["then", "else"]
+  }, //    {{#ifexpr: expression | value if true | value if false }}
+  "#ifexist:": {
+    argCnt: 3,
+    nodeType: "#ifexist",
+    titleNodeType: "if page exists",
+    otherNodeTypes: ["then", "else"]
+  }, //{{#ifexist: page title | value if exists | value if doesn't exist }}
+  "#rel2abs:": {
+    argCntLE: 2,
+    nodeType: "#rel2abs",
+    titleNodeType: "convert path",
+    otherNodeTypes: ["base path"]
+  }, //{{#rel2abs: path }} {{#rel2abs: path | base path }}
   "#switch:": {}, //{{#switch: comparison string
   //| case = result
   //| case = result
@@ -1414,11 +1434,21 @@ const parserFunctionsConfigs = {
   //| default result
   //}}
 
-  "#time:": { argCntLE: 4 }, //{{#time: format string }}
+  "#time:": {
+    argCntLE: 4,
+    nodeType: "#time",
+    titleNodeType: "format string",
+    otherNodeTypes: ["date/time object", "language code", "local"]
+  }, //{{#time: format string }}
   //{{#time: format string | date/time object }}
   //{{#time: format string | date/time object | language code }}
   //{{#time: format string | date/time object | language code | local }}
-  "#titleparts:": { argCnt: 3 } //{{#titleparts: pagename | number of segments to return | first segment to return }}
+  "#titleparts:": {
+    argCnt: 3,
+    nodeType: "#titleparts",
+    titleNodeType: "get parts of title",
+    otherNodeTypes: ["number of segments", "first segment"]
+  } //{{#titleparts: pagename | number of segments to return | first segment to return }}
 };
 function parsePartToParamForparserFunc(branch) {
   let oc = branch.children;
@@ -1443,7 +1473,8 @@ function parsePartToParamForparserFunc(branch) {
 
 async function _parserFunc(func, ast, src, url, warnings) {
   let titleNode = ast.children[0];
-  let title = (await getTitle(titleNode, url, src)).trim();
+  let title = await getTitle(titleNode, url, src);
+  title = title.trim();
   let titleExpStr = title.substring(func.length);
 
   titleNode._str = titleExpStr;
@@ -1472,7 +1503,7 @@ async function _parserFunc(func, ast, src, url, warnings) {
       } arguments, it should have at most ${config.argCntLE} arguments.`
     });
   }
-  debugger;
+
   for (let i = 0; i < config.otherNodeTypes.length; i++) {
     let child = ast.children[i + 1];
     if (!child) break;
