@@ -1,0 +1,15 @@
+
+
+// ifeq
+{{#ifeq: 01 | 1 | equal | not equal}} → equal
+{{#ifeq: 0 | -0 | equal | not equal}} → equal
+{{#ifeq: 1e3 | 1000 | equal | not equal}} → equal
+{{#ifeq: {{#expr:10^3}} | 1000 | equal | not equal}} → equal
+
+Otherwise the comparison is made as text; this comparison is case sensitive:
+
+{{#ifeq: foo | bar | equal | not equal}} → not equal
+{{#ifeq: foo | Foo | equal | not equal}} → not equal
+{{#ifeq: foo | foo | equal | not equal}} → equal
+{{#ifeq: "01" | "1" | equal | not equal}} → not equal  (compare to similar example above, without the quotes)
+{{#ifeq: 10^3 | 1000 | equal | not equal}} → not equal
