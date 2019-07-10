@@ -1376,6 +1376,7 @@ const supportedParserFunctions = {
   "#rel2abs:": "#rel2abs:",
   "#switch:": "#switch:",
   "#time:": "#time:",
+  "#timel:": "#timel:",
   "#titleparts:": "#titleparts:"
 };
 async function parserExtParserFunctions(ast, src, url, warnings) {
@@ -1461,6 +1462,14 @@ const parserFunctionsConfigs = {
   //{{#time: format string | date/time object }}
   //{{#time: format string | date/time object | language code }}
   //{{#time: format string | date/time object | language code | local }}
+  "#timel:": {
+    argCntLE: 3,
+    nodeType: "#timel",
+    titleNodeType: "format string",
+    otherNodeTypes: ["date/time object", "language code"]
+  }, // {{#timel: format string }}
+  // {{#timel: format string | date/time object }}
+  // {{#timel: format string | date/time object | language code }}
   "#titleparts:": {
     argCnt: 3,
     nodeType: "#titleparts",
@@ -1675,6 +1684,10 @@ let parserFunc = async (func, ast, src, url, warnings) => {
       break;
     }
     case "#time:":
+      // no highligh needed
+      break;
+    case "#timel:":
+      // no highligh needed
       break;
     case "#titleparts:":
       break;
