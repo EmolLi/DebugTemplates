@@ -1384,7 +1384,7 @@ async function parserExtParserFunctions(ast, src, url, warnings) {
     title = title.trim();
     for (let func in supportedParserFunctions) {
       if (title.substr(0, func.length) == func) {
-        await _parserFunc(func, ast, src, url, warnings);
+        await parserFunc(func, ast, src, url, warnings);
         break;
       }
     }
@@ -1425,7 +1425,8 @@ const parserFunctionsConfigs = {
     argCnt: 3,
     nodeType: "#ifexpr",
     titleNodeType: "if expr",
-    otherNodeTypes: ["then", "else"]
+    otherNodeTypes: ["then", "else"],
+    evalOtherNodes: true
   }, //    {{#ifexpr: expression | value if true | value if false }}
   "#ifexist:": {
     argCnt: 3,
@@ -1484,7 +1485,13 @@ function parsePartToParamForparserFunc(branch) {
   }
 }
 
-async function _parserFunc(func, ast, src, url, warnings) {
+let parserFunc = async (func, ast, src, url, warnings) => {
+  // ast._eval = await apiEvalAsync(
+  //   src.substring(ast.start, ast.end + 1),
+  //   "",
+  //   url
+  // );
+
   let titleNode = ast.children[0];
   let title = await getTitle(titleNode, url, src);
   title = title.trim();
@@ -1572,25 +1579,8 @@ async function _parserFunc(func, ast, src, url, warnings) {
     }
     case "#iferror:": {
       let errStr = titleNode._eval.trim();
-      let evalResult = false;
-      if (
-        errStr.indexOf("<") >= 0 &&
-        errStr.indexOf(">") > 11 &&
-        errStr.indexOf("error") > 6 &&
-        errStr.indexOf("class") > 1
-      ) {
-        try {
-          // TODO: is the call blocking?
-          let domNode = getXMLParser()(errStr);
-          if (
-            domNode.childNodes &&
-            domNode.childNodes[0] &&
-            domNode.childNodes[0].classList.contains("error")
-          ) {
-            evalResult = true;
-          }
-        } catch (err) {}
-      }
+      let evalResult = isErrorMeg(errStr);
+
       let branchA = ast.children[1];
       let branchB = ast.children[2];
       if (evalResult) {
@@ -1602,6 +1592,20 @@ async function _parserFunc(func, ast, src, url, warnings) {
       break;
     }
     case "#ifexpr:": {
+      let evalExp = `{{#expr:${titleExpStr}}}`;
+      let expResult = await apiEvalAsync(evalExp, "", url);
+      expResult = expResult.trim();
+      let evalResult = false;
+      if (!!expResult && expResult != "0" && !isErrorMeg(expResult))
+        evalResult = true;
+
+      let branchA = ast.children[1];
+      let branchB = ast.children[2];
+      if (evalResult) {
+        if (branchA) branchA._highlight = true;
+      } else {
+        if (branchB) branchB._highlight = true;
+      }
       break;
     }
     case "#ifexist:":
@@ -1616,124 +1620,26 @@ async function _parserFunc(func, ast, src, url, warnings) {
       break;
     default:
   }
-}
-async function parserFunc(func, ast, src, url, warnings) {
-  let titleNode = ast.children[0];
-  let title = (await getTitle(titleNode, url, src)).trim();
-  let titleExpStr = title.substring(func.length);
+};
 
-  titleNode._str = titleExpStr;
-  let titleExpEval = await apiEvalAsync(titleExpStr, "", url);
-  titleNode._eval = titleExpEval;
-
-  switch (func) {
-    case "#expr:":
-      break;
-    case "#if:": {
-      ast.type = "if";
-      titleNode.type = "condition";
-
-      if (ast.children.length != 3) {
-        warnings.push({
-          start: ast.start,
-          end: ast.end,
-          warning: `#if function has ${ast.children.length -
-            1} branch(es), it should have 2 branches.`
-        });
+function isErrorMeg(errStr) {
+  if (
+    errStr.indexOf("<") >= 0 &&
+    errStr.indexOf(">") > 11 &&
+    errStr.indexOf("error") > 6 &&
+    errStr.indexOf("class") > 1
+  ) {
+    try {
+      // TODO: is the call blocking?
+      let domNode = getXMLParser()(errStr);
+      if (
+        domNode.childNodes &&
+        domNode.childNodes[0] &&
+        domNode.childNodes[0].classList.contains("error")
+      ) {
+        return true;
       }
-
-      if (ast.children[1]) {
-        ast.children[1].type = "then";
-        if (titleNode._eval) ast.children[1]._selected = true;
-        parsePartToParamForparserFunc(ast.children[1]);
-      }
-      if (ast.children[2]) {
-        ast.children[2].type = "else";
-        if (!titleNode._eval) ast.children[2]._selected = true;
-        parsePartToParamForparserFunc(ast.children[2]);
-      }
-
-      debugger;
-      break;
-    }
-    case "#ifeq:": {
-      ast.type = "if equal";
-      titleNode.type = "if string 1 equals";
-
-      if (ast.children.length != 4) {
-        warnings.push({
-          start: ast.start,
-          end: ast.end,
-          warning: `#ifeq function has ${
-            ast.children.length
-          } argument(es), it should have 4 arguments: two strings and two branches.`
-        });
-      }
-
-      let strRNode = ast.children[1];
-      let branchA = ast.children[2];
-      let branchB = ast.children[3];
-      if (strRNode) {
-        // string Right
-        let strR = src.substring(strRNode.start + 1, strRNode.end + 1);
-        let evalStrR = await apiEvalAsync(strR, "", url);
-        strRNode._src = strR;
-        strRNode._eval = evalStrR;
-        strRNode.type = "string 2";
-        parsePartToParamForparserFunc(strRNode);
-      }
-      if (branchA) {
-        branchA.type = "then";
-        // TODO: eval equal
-        parsePartToParamForparserFunc(branchA);
-      }
-      if (branchB) {
-        branchB.type = "else";
-        parsePartToParamForparserFunc(branchB);
-      }
-      break;
-    }
-    case "#iferror:": {
-      ast.type = "if error";
-      titleNode.type = "if exp is erroneous";
-
-      if (ast.children.length != 3) {
-        warnings.push({
-          start: ast.start,
-          end: ast.end,
-          warning: `#iferror function has ${
-            ast.children.length
-          } argument(es), it should have 3 arguments: one expression and two branches.`
-        });
-      }
-
-      let branchA = ast.children[1];
-      let branchB = ast.children[2];
-      if (branchA) {
-        branchA.type = "then";
-        // TODO: choose statement
-        parsePartToParamForparserFunc(branchA);
-      }
-      if (branchB) {
-        branchB.type = "else";
-        parsePartToParamForparserFunc(branchB);
-      }
-      break;
-    }
-    case "#ifexpr:": {
-      break;
-    }
-    case "#ifexist:":
-      break;
-    case "#rel2abs:":
-      break;
-    case "#switch:":
-      break;
-    case "#time:":
-      break;
-    case "#titleparts:":
-      break;
-    default:
+    } catch (err) {}
   }
 }
 // get title value of template/ arg
