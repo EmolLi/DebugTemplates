@@ -1440,7 +1440,11 @@ const parserFunctionsConfigs = {
     titleNodeType: "convert path",
     otherNodeTypes: ["base path"]
   }, //{{#rel2abs: path }} {{#rel2abs: path | base path }}
-  "#switch:": {}, //{{#switch: comparison string
+  "#switch:": {
+    nodeType: "#switch",
+    titleNodeType: "switch on expr",
+    otherNodeTypes: []
+  }, //{{#switch: comparison string
   //| case = result
   //| case = result
   //| ...
@@ -1608,12 +1612,68 @@ let parserFunc = async (func, ast, src, url, warnings) => {
       }
       break;
     }
-    case "#ifexist:":
+    case "#ifexist:": {
+      // unreliable result.
+      // no highlighted node
+      // is considered an "expensive parser function"; only a limited number of which can be included on any one page (including functions inside transcluded templates). When this limit is exceeded, any further #ifexist: functions automatically return false, whether the target page exists or not
       break;
-    case "#rel2abs:":
+    }
+    case "#rel2abs:": {
+      // no highlighted node
       break;
-    case "#switch:":
+    }
+    case "#switch:": {
+      let highlightedCase = -1;
+      let defaultCase;
+      for (let i = 1; i < ast.children.length; i++) {
+        let child = ast.children[i];
+        if (!child) break;
+        child.type = "case";
+
+        let nameNode = child.children[0];
+        if (child.children.length == 3) {
+          if (nameNode.length == 0) {
+            // name is an empty str
+            if (titleNode._eval.trim() == "") {
+              highlightedCase = i;
+            }
+          } else {
+            // name is not empty
+            child._eval = await apiEvalAsync(
+              src.substring(nameNode.start, nameNode.end + 1),
+              "",
+              url
+            );
+            if (child._eval.trim() == "#default") {
+              child.type = "default case";
+              defaultCase = child;
+            } else if (child._eval.trim() == titleNode._eval.trim()) {
+              highlightedCase = i;
+            }
+          }
+        } else {
+          if (i == ast.children.length - 1) {
+            child.type = "default case";
+            defaultCase = child;
+          }
+          // defaultCase
+          else {
+            child._eval = await apiEvalAsync(
+              src.substring(child.children[1].start, child.children[1].end + 1),
+              "",
+              url
+            );
+            if (child._eval.trim() == titleNode._eval.trim()) {
+              highlightedCase = i;
+            }
+          } // fall through
+        }
+      }
+      if (highlightedCase >= 1) ast.children[highlightedCase]._highlight = true;
+      else if (defaultCase) defaultCase._highlight = true;
+
       break;
+    }
     case "#time:":
       break;
     case "#titleparts:":
