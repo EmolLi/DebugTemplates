@@ -5,7 +5,6 @@
  * @license CC BY-SA 3.0
  **/
 
-// TODO: space, newline in editor
 const corsProxy = "https://gentle-taiga-41562.herokuapp.com/";
 function getUrl(url) {
   if (new URL(url).hostname != "localhost") {
@@ -107,17 +106,7 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
   // "{{Test|p1={{Test|p2=ddd}}}} {{Test|p1={p2|p}=22}|o3={dd}|d{=p3|ddd}}",
   class App extends React.Component {
     state = {
-      src: `    {{#ifeq: 01 | 1 | equal | not equal}} → equal
-    {{#ifeq: 0 | -0 | equal | not equal}} → equal
-    {{#ifeq: 1e3 | 1000 | equal | not equal}} → equal
-    {{#ifeq: {{#expr:10^3}} | 1000 | equal | not equal}} → equal
-
-Otherwise the comparison is made as text; this comparison is case sensitive:
-
-    {{#ifeq: foo | bar | equal | not equal}} → not equal
-    {{#ifeq: foo | Foo | equal | not equal}} → not equal
-    {{#ifeq: "01" | "1" | equal | not equal}} → not equal  (compare to similar example above, without the quotes)
-    {{#ifeq: 10^3 | 1000 | equal | not equal}} → not equal  `,
+      src: "{{#ifexpr: | yes | no}}",
       treeView: null,
       result: "",
       errors: "",
@@ -175,6 +164,34 @@ Otherwise the comparison is made as text; this comparison is case sensitive:
             >
               Parser Functions
             </Checkbox>
+          </Panel>
+        </Collapse>
+      );
+    }
+
+    ResultPanel() {
+      const { result } = this.state;
+      return (
+        <Collapse
+          className="debugger-collapse-section"
+          expandIconPosition="right"
+          bordered={false}
+          defaultActiveKey={["1"]}
+        >
+          <Panel
+            header={
+              <Title level={4} type="secondary">
+                Result
+              </Title>
+            }
+            key="1"
+            style={customPanelStyle}
+          >
+            <div id="debugger-result-content">
+              <pre className="debugger-result-content-pre">
+                <code>{result}</code>
+              </pre>
+            </div>
           </Panel>
         </Collapse>
       );
@@ -368,16 +385,29 @@ Otherwise the comparison is made as text; this comparison is case sensitive:
 
     inputTextWithHighlight() {
       const { src, inputHighlight } = this.state;
-      if (!inputHighlight) return <Text>{src}</Text>;
+      if (!inputHighlight)
+        return (
+          <pre className="debugger-input-textarea-pre">
+            <code>{src}</code>
+          </pre>
+        );
       return (
         <React.Fragment>
-          {inputHighlight[0] > 0 && (
-            <Text disabled>{src.substring(0, inputHighlight[0])}</Text>
-          )}
-          <Text>{src.substring(inputHighlight[0], inputHighlight[1] + 1)}</Text>
-          {inputHighlight[1] < src.length - 1 && (
-            <Text disabled>{src.substring(inputHighlight[1] + 1)}</Text>
-          )}
+          <pre className="debugger-input-textarea-pre">
+            {inputHighlight[0] > 0 && (
+              <code className="disabled">
+                {src.substring(0, inputHighlight[0])}
+              </code>
+            )}
+            <code>
+              {src.substring(inputHighlight[0], inputHighlight[1] + 1)}
+            </code>
+            {inputHighlight[1] < src.length - 1 && (
+              <code className="disabled">
+                {src.substring(inputHighlight[1] + 1)}
+              </code>
+            )}
+          </pre>
         </React.Fragment>
       );
     }
@@ -434,7 +464,6 @@ Otherwise the comparison is made as text; this comparison is case sensitive:
 
     ErrorSection = () => {
       const { errors, unmatchedBracket } = this.state;
-
       return (
         <div id="debugger-errors" className="debugger-section">
           <Title level={4}>Errors</Title>
@@ -445,7 +474,8 @@ Otherwise the comparison is made as text; this comparison is case sensitive:
                 <br />
               </Text>
             )}
-            {unmatchedBracket.length > 0 &&
+            {unmatchedBracket &&
+              unmatchedBracket.length > 0 &&
               unmatchedBracket.map((b, i) => (
                 <Text
                   type="warning"
@@ -547,14 +577,7 @@ Otherwise the comparison is made as text; this comparison is case sensitive:
               {this.CallStackSection()}
               {this.ParamsTable()}
               <div>
-                <div id="debugger-result">
-                  <Title level={4} type="secondary">
-                    Result
-                  </Title>
-                  <div id="debugger-result-content">
-                    <Paragraph>{result}</Paragraph>
-                  </div>
-                </div>
+                {this.ResultPanel()}
                 {this.TreeView()}
               </div>
             </div>
@@ -566,6 +589,17 @@ Otherwise the comparison is made as text; this comparison is case sensitive:
 
   ReactDOM.render(<App />, root);
 });
+
+// <div id="debugger-result">
+//   <Title level={4} type="secondary">
+//     Result
+//   </Title>
+//   <div id="debugger-result-content">
+//     <pre className="debugger-result-content-pre">
+//       <code>{result}</code>
+//     </pre>
+//   </div>
+// </div>
 
 // fucntion formatType(type) {
 //       if (!type) return "";
@@ -662,6 +696,7 @@ function apiEval(t, title, url, callback) {
 }
 
 async function apiEvalAsync(src, title, url, params) {
+  if (src == "") return "";
   let args = "action=expandframe&format=json";
   if (title) {
     args = args + "&title=" + encodeURIComponent(title);
@@ -670,7 +705,7 @@ async function apiEvalAsync(src, title, url, params) {
   if (params && params.length > 0) {
     let p = {};
     params.forEach(k => (p[k.name] = k.value));
-    args = args + "&frame=" + encodeURIComponent(JSON.stringify(p));
+    args = args + "&frame=" + encodeURIComponfent(JSON.stringify(p));
   }
   let response = await fetch(getUrl(url), {
     method: "POST",
@@ -1128,7 +1163,6 @@ function getAst(node) {
 
 function mapAstToSrc(ast, src) {
   let { templatesAndParams, unmatchedBracket } = extractTemplatesAndParams(ast);
-  console.log(templatesAndParams);
   let stack_ast = [];
   let stack_src = [];
   let ast_i = 0;

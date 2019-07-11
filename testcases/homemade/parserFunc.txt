@@ -64,7 +64,7 @@ One or both of the return strings can be omitted. If the correct string is omitt
 
     An empty input expression evaluates to false:
 
-        {{#ifexpr: | yes | no}} → no    // FIXME: bug
+        {{#ifexpr: | yes | no}} → no    
 
     As mentioned above, zero evaluates to false and any nonzero value evaluates to true, so this function is equivalent to one using #ifeq and #expr only:
 

@@ -2,6 +2,24 @@
   background: transparent;
   border: 0;
 }
+pre.debugger-input-textarea-pre {
+  min-height: 400px !important;
+}
+pre.debugger-result-content-pre {
+  min-height: 150px !important;
+}
+pre {
+  background: none !important;
+}
+pre code {
+  /* color: #c2c2c2; */
+  background: none !important;
+  border: none !important;
+  padding: none !important;
+}
+pre code.disabled {
+  color: #c2c2c2;
+}
 .debugger-collapse-section .ant-collapse-content-box {
   padding-left: 0px !important;
   padding-right: 0px !important;
