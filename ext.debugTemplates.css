@@ -10,6 +10,7 @@ pre.debugger-result-content-pre {
 }
 pre {
   background: none !important;
+  overflow-wrap: break-word !important;
 }
 pre code {
   /* color: #c2c2c2; */

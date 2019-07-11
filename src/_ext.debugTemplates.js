@@ -349,6 +349,7 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
       const { type, value, id, children } = node;
       // type = formatType(type);
       // value = format(value)
+      // TODO: fix overflow
       return (
         <TreeNode
           title={`${node.type ? node.type : ""}${
