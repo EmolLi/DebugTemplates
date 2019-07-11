@@ -73,7 +73,12 @@ pre code.disabled {
 }
 
 #debugger-tree-view {
-  min-height: 400px;
+  height: 400px;
+}
+
+#debugger-tree-view-content {
+  height: 350px;
+  overflow: scroll;
 }
 
 #debugger-result {
