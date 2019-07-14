@@ -3,10 +3,12 @@
   border: 0;
 }
 pre.debugger-input-textarea-pre {
-  min-height: 400px !important;
+  height: 400px !important;
+  overflow: scroll;
 }
 pre.debugger-result-content-pre {
-  min-height: 150px !important;
+  height: 150px !important;
+  overflow: scroll;
 }
 pre {
   background: none !important;

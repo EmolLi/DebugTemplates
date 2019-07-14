@@ -73,7 +73,8 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
     Tree,
     Icon,
     Collapse,
-    Checkbox
+    Checkbox,
+    Tag
   } = antd;
   const { TextArea, Search } = Input;
   const { Title, Paragraph, Text } = Typography;
@@ -349,23 +350,39 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
       const { type, value, id, children } = node;
       // type = formatType(type);
       // value = format(value)
-      // TODO: fix overflow
       return (
-        <TreeNode
-          title={`${node.type ? node.type : ""}${
-            node.type && node.value ? " " : ""
-          }${node.value ? node.value : ""}${
-            node._eval != undefined ? ` [${node._eval}]` : ""
-          }${node._highlight ? "  <SELECTED>" : ""}`}
-          key={node.id}
-          node={node}
-        >
+        <TreeNode title={this.formatTreeNode(node)} key={node.id} node={node}>
           {node.children.length > 0 &&
             node.children.map(c => this.generateTreeNode(c))}
         </TreeNode>
       );
     }
 
+    formatTreeNode(node) {
+      const { type, value, id, children } = node;
+      debugger;
+      return (
+        <div>
+          {type}
+          {this.formatValue(value)}
+          {this.formatEval(node._eval)}
+          {node._highlight ? "  <SELECTED>" : ""}
+        </div>
+      );
+    }
+
+    formatType(type) {
+      if (!type) return null;
+      return <Tag color="magenta">{type}</Tag>;
+    }
+    formatValue(value) {
+      if (!value) return null;
+      return <Tag>{value}</Tag>;
+    }
+    formatEval(_eval) {
+      if (!_eval) return null;
+      return <Tag color="blue">{_eval}</Tag>;
+    }
     TreeView() {
       const { treeView } = this.state;
       return (
