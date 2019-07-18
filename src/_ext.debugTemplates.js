@@ -1205,6 +1205,16 @@ function mapAstToSrc(ast, src) {
         expectedStartLen >= 0 &&
         src.substr(src_i, expectedStartLen) == expectedStart
       ) {
+        if (curr.type == "ext") {
+          let src_j = src_i + expectedStartLen;
+          while (src.charAt(src_j) == " ") src_j++;
+          if (src.charAt(src_j) == ">") {
+            curr.start = src_i;
+            src_i = src_j + 1;
+            break;
+          }
+        }
+
         curr.start = src_i;
         src_i += expectedStartLen;
         break;
@@ -1227,8 +1237,32 @@ function mapAstToSrc(ast, src) {
     }
 
     // match ends
-    while (src_i < src.length) {
+    matchEnd: while (src_i < src.length) {
       let c = src.charAt(src_i);
+
+      if (curr.type == "ext") {
+        while (src_i < src.length) {
+          if (src.substr(src_i, expectedStartLen + 1) == expectedEnd) {
+            let src_j = src_i + expectedStartLen + 1;
+            while (src.charAt(src_j) == " ") src_j++;
+            if (src.charAt(src_j) == ">") {
+              curr.end = src_j;
+              src_i = src_j + 1;
+
+              stack_ast.splice(stack_ast.length - 1, 1); // pop
+              if (stack_ast.length == 0) break matchEnd;
+              curr = stack_ast[stack_ast.length - 1];
+              ({
+                expectedStart,
+                expectedEnd,
+                expectedStartLen
+              } = getExpectedPattern(curr));
+              break;
+            }
+          }
+          src_i++;
+        }
+      }
 
       if (curr.type == "part" || curr.type == "value") {
         // part unfinished
@@ -1291,7 +1325,7 @@ function mapAstToSrc(ast, src) {
         curr.children[0].start = curr.start + expectedStartLen;
         curr.children[0].end = src_i - 1;
         break;
-      } else if (c == "{") break;
+      } else if (c == "{" && curr.type != "ext") break;
       // match next
       else if (c == "}") {
         if (
@@ -1338,7 +1372,8 @@ function extractTemplatesAndParams(ast) {
       curr.type == "tplarg" ||
       curr.type == "part" ||
       curr.type == "name" ||
-      curr.type == "value"
+      curr.type == "value" ||
+      curr.type == "ext"
     )
       templatesAndParams.push(curr);
     if (curr.value) {
@@ -1357,6 +1392,19 @@ function extractTemplatesAndParams(ast) {
       stack_tree_explore.push(curr.children[j]);
     }
   }
+
+  // name after nowiki should be removed
+  let i = 0;
+  while (i < templatesAndParams.length - 1) {
+    if (
+      templatesAndParams[i].type == "ext" &&
+      templatesAndParams[i + 1].type == "name"
+    ) {
+      templatesAndParams.splice(i + 1, 1);
+      i++;
+    }
+  }
+
   return { templatesAndParams, unmatchedBracket };
 }
 
@@ -1385,6 +1433,10 @@ function getExpectedPattern(node) {
     case "part":
       expectedStart = "|";
       expectedEnd = "";
+      break;
+    case "ext":
+      expectedStart = "<nowiki";
+      expectedEnd = "</nowiki";
       break;
     default:
       break;
