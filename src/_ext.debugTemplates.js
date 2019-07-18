@@ -256,7 +256,7 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
     };
 
     stepIntoTemplate = async () => {
-      const { selectedNode, url, src, stepHistory } = this.state;
+      let { selectedNode, url, src, stepHistory } = this.state;
       if (selectedNode.type != "template") {
         console.log("eeeeee");
       }
