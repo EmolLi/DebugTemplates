@@ -657,14 +657,7 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
 
 // For indexing the displayed HTML nodes with unique numbers used in highlighting.
 var nindex = 0;
-// For indexexing AST nodes with unique numbers.
-var xindex = 0;
-// Mapping from nindex to xindex.
-var nTox = [];
-// Root of the AST.
 var ast;
-// Array of things done for undoing.  Each entry is a string or an array of strings.// Constant: timeout interval in ms used in making sequences of API calls.
-var apiCallInterval = 30;
 
 /**
  * Perform a POST operation.
@@ -695,6 +688,9 @@ function doPost(url, params, callback) {
   x.send(params);
 }
 
+//===============================API SERVICES=====================
+//================================================================
+//================================================================
 /**
  * Asks the wiki API to parse the given text into XML.
  *
@@ -824,6 +820,9 @@ function apiGetTemplateName(t, callback) {
   doPost(url, args, callback);
 }
 
+//===============================PARSING==========================
+//================================================================
+//================================================================
 /**
  * Retrieves an XML parser, or null if it cannot find one.
  *
@@ -1131,15 +1130,59 @@ function includesUnmatchedBracket(str) {
 
 async function parserExtensions(ast, src, extensions, url, warnings = []) {
   if (extensions.parserFunctions) {
-    await parserExtParserFunctions(ast, src, url, warnings);
+    await parserExtInTemplateSyntax(ast, src, url, warnings, "parserFunctions");
   }
   if (extensions.variables) {
-    await parserExtVariables(ast, src, url, warnings);
+    // await parserExtVariables(ast, src, url, warnings);
   }
   // let title = await apiEvalAsync(titleSrc, "", url);
 }
 
-// grammar rules based on https://www.mediawiki.org/wiki/Help:Extension:ParserFunctions
+// ===================== EXT: variables ============================
+// =================================================================
+// grammar rules based on https://www.mediawiki.org/wiki/Extension:Variables#Installation
+const supportedVariablesUtils = {
+  "#vardefine:": "#vardefine:",
+  "#vardefineecho:": "#vardefineecho:",
+  "#var:": "#var:",
+  "#varexists:": "#varexists:",
+  "#var_final:": "#var_final:"
+};
+
+const variablesUtilsConfigs = {
+  "#vardefine:": {
+    argCnt: 2,
+    nodeType: "#vardefine",
+    titleNodeType: "define variable",
+    otherNodeTypes: ["specified value"]
+  },
+  "#vardefineecho:": {
+    argCnt: 2,
+    nodeType: "#vardefineecho",
+    titleNodeType: "define and print variable",
+    otherNodeTypes: ["specified value"]
+  },
+  "#var:": {
+    argCntLE: 2,
+    nodeType: "#var",
+    titleNodeType: "variable",
+    otherNodeTypes: ["default value"]
+  },
+  "#varexists:": {
+    argCntLE: 3,
+    nodeType: "#varexists",
+    titleNodeType: "if var is defined",
+    otherNodeTypes: ["then", "else"]
+  },
+  "#var_final:": {
+    argCnt: 2,
+    nodeType: "#var_final",
+    titleNodeType: "set final value for variable",
+    otherNodeTypes: ["default value"],
+    evalOtherNodes: true
+  }
+};
+
 const supportedParserFunctions = {
   "#expr:": "#expr:",
   "#if:": "#if:",
@@ -1153,23 +1196,6 @@ const supportedParserFunctions = {
   "#timel:": "#timel:",
   "#titleparts:": "#titleparts:"
 };
-async function parserExtParserFunctions(ast, src, url, warnings) {
-  if (ast.type == "template") {
-    let title = await getTitle(ast.children[0], url, src);
-    title = title.trim();
-    for (let func in supportedParserFunctions) {
-      if (title.substr(0, func.length) == func) {
-        await parserFunc(func, ast, src, url, warnings);
-        break;
-      }
-    }
-  }
-  await Promise.all(
-    ast.children.map(async c => {
-      await parserExtParserFunctions(c, src, url, warnings);
-    })
-  );
-}
 
 const parserFunctionsConfigs = {
   "#expr:": {
@@ -1251,6 +1277,39 @@ const parserFunctionsConfigs = {
     otherNodeTypes: ["number of segments", "first segment"]
   } //{{#titleparts: pagename | number of segments to return | first segment to return }}
 };
+
+const extConfigs = {
+  parserFunctions: {
+    supportedUtils: supportedParserFunctions,
+    configs: parserFunctionsConfigs
+  },
+  variables: {
+    supportedUtils: supportedVariablesUtils,
+    configs: variablesUtilsConfigs
+  }
+};
+// ===================== EXT: parser functions =====================
+// =================================================================
+// grammar rules based on https://www.mediawiki.org/wiki/Help:Extension:ParserFunctions
+
+async function parserExtInTemplateSyntax(ast, src, url, warnings, ext) {
+  if (ast.type == "template") {
+    let title = await getTitle(ast.children[0], url, src);
+    title = title.trim();
+    for (let func in extConfigs[ext].supportedUtils) {
+      if (title.substr(0, func.length) == func) {
+        await parserFunc(ext, func, ast, src, url, warnings);
+        break;
+      }
+    }
+  }
+  await Promise.all(
+    ast.children.map(async c => {
+      await parserExtInTemplateSyntax(c, src, url, warnings, ext);
+    })
+  );
+}
+
 function parsePartToParamForparserFunc(branch) {
   let oc = branch.children;
   branch.children = [...oc[0].children];
@@ -1272,7 +1331,7 @@ function parsePartToParamForparserFunc(branch) {
   }
 }
 
-let parserFunc = async (func, ast, src, url, warnings) => {
+let parserFunc = async (ext, func, ast, src, url, warnings) => {
   // ast._eval = await apiEvalAsync(
   //   src.substring(ast.start, ast.end + 1),
   //   "",
@@ -1288,7 +1347,7 @@ let parserFunc = async (func, ast, src, url, warnings) => {
   let titleExpEval = await apiEvalAsync(titleExpStr, "", url);
   titleNode._eval = titleExpEval;
 
-  let config = parserFunctionsConfigs[func];
+  let config = extConfigs[ext].configs[func];
   ast.type = config.nodeType;
   titleNode.type = config.titleNodeType;
 
@@ -1491,6 +1550,8 @@ function isErrorMeg(errStr) {
     } catch (err) {}
   }
 }
+
+// =================================================================
 // get title value of template/ arg
 async function getTitle(titleNode, url, src) {
   if (!titleNode._value) {

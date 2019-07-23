@@ -1,0 +1,52 @@
+
+#vardefine
+{{#vardefine:variablename|specifiedvalue}}
+Example: {{#vardefine:iconwidth|25}} {{#var:iconwidth}} = 25
+
+#vardefineecho
+Works exactly as #vardefine, but the affected value is printed.
+
+Example: making iconwidth = <code>{{#vardefineecho:iconwidth|25}}</code>
+
+Retrieving the value of a variable
+#var
+The value of the variable variablename is produced by
+
+{{#var:variablename}}
+If undefined, this produces an empty string; it does not give an error message.
+
+It is possible to define a value for the case that the variable is undefined or void:
+
+{{#var:variablename | defaultvalue }}
+This is equivalent to:
+
+{{#if: {{#var:variablename}} | {{#var:variablename }} | defaultvalue }}
+but it is much shorter and better arranged. Before version 2.0 though, the default value always was expanded. From version 2.0 on the default only gets expanded in case it is actually used.
+
+The value can be used in parser functions, etc.
+
+#varexists
+{{#varexists:variablename }} returns 1 if the variable is already defined. If the variable is not defined the return value is void.
+It supports a second and a third parameter to replace these values.
+
+{{#varexists: variablename | if-value | else-value }}
+This is equivalent to:
+
+{{#if: {{#varexists: variablename }} | if-value | else-value }}
+but it is much shorter and better arranged. Before version 2.5 though, both were always expanded. From version 2.5 on the if and else values only get expanded when their cases are actually entered.
+
+#var_final
+Experimental new function introduced in Variables 2.0. This function will output the final, last value a variable has at the end of the page rendering. Naturally, the value will be inserted after the parser went over the entire wiki markup, so this function can't be used in other functions, expecting the right value is being used. Example:
+
+{{#var_final:variablename | defaultvalue}}
+The default value will be used if the variable doesn't exist at the final page rendering stage or if its value is an empty string. The default will be expanded right where the function is used, so the parameter will be expanded, even if it won't be needed.
+
+Examples
+The ParserFunctions extension must also be installed to use #expr.
+
+Compute x = 2*a + b:
+
+{{#vardefine:x|{{#expr:2*{{#var:a}}+{{#var:b}}}}}}
+Add one to n:
+
+{{#vardefine:n|{{#expr:{{#var:n}}+1}}}}
