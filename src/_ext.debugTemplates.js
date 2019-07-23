@@ -1753,6 +1753,7 @@ let parserFunc = async (func, ast, src, url, warnings) => {
               "",
               url
             );
+            child._eval = child._eval.replace("&#61;", "=");
             if (child._eval.trim() == "#default") {
               child.type = "default case";
               defaultCase = child;
@@ -1772,6 +1773,7 @@ let parserFunc = async (func, ast, src, url, warnings) => {
               "",
               url
             );
+            child._eval = child._eval.replace("&#61;", "=");
             if (child._eval.trim() == titleNode._eval.trim()) {
               highlightedCase = i;
             }
