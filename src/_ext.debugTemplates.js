@@ -360,7 +360,6 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
 
     formatTreeNode(node) {
       const { type, value, id, children } = node;
-      debugger;
       return (
         <div>
           {type}
@@ -1231,7 +1230,7 @@ function mapAstToSrc(ast, src) {
     ) {
       // unmatched bracket, empty name/ value in part
       stack_ast.splice(stack_ast.length - 1, 1); // pop
-      if (stack_ast.length == 0) break;
+      if (stack_ast.length == 0) continue;
       curr = stack_ast[stack_ast.length - 1];
       ({ expectedStart, expectedEnd, expectedStartLen } = getExpectedPattern(
         curr
