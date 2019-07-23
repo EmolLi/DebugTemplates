@@ -1133,7 +1133,7 @@ async function parserExtensions(ast, src, extensions, url, warnings = []) {
     await parserExtInTemplateSyntax(ast, src, url, warnings, "parserFunctions");
   }
   if (extensions.variables) {
-    // await parserExtVariables(ast, src, url, warnings);
+    await parserExtInTemplateSyntax(ast, src, url, warnings, "variables");
   }
   // let title = await apiEvalAsync(titleSrc, "", url);
 }
@@ -1378,155 +1378,160 @@ let parserFunc = async (ext, func, ast, src, url, warnings) => {
   }
 
   // eval each Function
-
-  switch (func) {
-    case "#expr:":
-      break;
-    case "#if:": {
-      let evalResult = titleNode._eval.trim();
-      if (!!evalResult) {
-        if (ast.children[1]) ast.children[1]._highlight = true;
-      } else {
-        if (ast.children[2]) ast.children[2]._highlight = true;
+  if (ext == "parserFunctions") {
+    switch (func) {
+      case "#expr:":
+        break;
+      case "#if:": {
+        let evalResult = titleNode._eval.trim();
+        if (!!evalResult) {
+          if (ast.children[1]) ast.children[1]._highlight = true;
+        } else {
+          if (ast.children[2]) ast.children[2]._highlight = true;
+        }
+        break;
       }
-      break;
-    }
-    case "#ifeq:": {
-      let strRNode = ast.children[1];
-      if (strRNode) {
-        // string Right
-        let strR = src.substring(strRNode.start + 1, strRNode.end + 1);
-        let evalStrR = await apiEvalAsync(strR, "", url);
-        strRNode._src = strR;
-        strRNode._eval = evalStrR;
-      }
+      case "#ifeq:": {
+        let strRNode = ast.children[1];
+        if (strRNode) {
+          // string Right
+          let strR = src.substring(strRNode.start + 1, strRNode.end + 1);
+          let evalStrR = await apiEvalAsync(strR, "", url);
+          strRNode._src = strR;
+          strRNode._eval = evalStrR;
+        }
 
-      if (!strRNode) break;
-      let str1 = titleNode._eval.trim();
-      let str2 = strRNode._eval.trim();
-      let evalResult = false;
-      if (str1 == str2) evalResult = true;
-      // If both strings are valid numerical values, the strings are compared numerically.
-      // "^" is XOR in javascript, "10^3" is a valid number in javascript but not in wikitext.
-      else if (str1.indexOf("^") < 0 && str2.indexOf("^") < 0) {
-        let num1 = Number.parseFloat(str1);
-        let num2 = Number.parseFloat(str2);
-        if (!isNaN(num1) && !isNaN(num2) && num1 == num2) evalResult = true;
-      }
+        if (!strRNode) break;
+        let str1 = titleNode._eval.trim();
+        let str2 = strRNode._eval.trim();
+        let evalResult = false;
+        if (str1 == str2) evalResult = true;
+        // If both strings are valid numerical values, the strings are compared numerically.
+        // "^" is XOR in javascript, "10^3" is a valid number in javascript but not in wikitext.
+        else if (str1.indexOf("^") < 0 && str2.indexOf("^") < 0) {
+          let num1 = Number.parseFloat(str1);
+          let num2 = Number.parseFloat(str2);
+          if (!isNaN(num1) && !isNaN(num2) && num1 == num2) evalResult = true;
+        }
 
-      let branchA = ast.children[2];
-      let branchB = ast.children[3];
-      if (evalResult) {
-        if (branchA) branchA._highlight = true;
-      } else {
-        if (branchB) branchB._highlight = true;
+        let branchA = ast.children[2];
+        let branchB = ast.children[3];
+        if (evalResult) {
+          if (branchA) branchA._highlight = true;
+        } else {
+          if (branchB) branchB._highlight = true;
+        }
+        break;
       }
-      break;
-    }
-    case "#iferror:": {
-      let errStr = titleNode._eval.trim();
-      let evalResult = isErrorMeg(errStr);
+      case "#iferror:": {
+        let errStr = titleNode._eval.trim();
+        let evalResult = isErrorMeg(errStr);
 
-      let branchA = ast.children[1];
-      let branchB = ast.children[2];
-      if (evalResult) {
-        if (branchA) branchA._highlight = true;
-      } else {
-        if (branchB) branchB._highlight = true;
-        else titleNode._highlight = true;
+        let branchA = ast.children[1];
+        let branchB = ast.children[2];
+        if (evalResult) {
+          if (branchA) branchA._highlight = true;
+        } else {
+          if (branchB) branchB._highlight = true;
+          else titleNode._highlight = true;
+        }
+        break;
       }
-      break;
-    }
-    case "#ifexpr:": {
-      let evalExp = `{{#expr:${titleExpStr}}}`;
-      let expResult = await apiEvalAsync(evalExp, "", url);
-      expResult = expResult.trim();
-      let evalResult = false;
-      if (!!expResult && expResult != "0" && !isErrorMeg(expResult))
-        evalResult = true;
+      case "#ifexpr:": {
+        let evalExp = `{{#expr:${titleExpStr}}}`;
+        let expResult = await apiEvalAsync(evalExp, "", url);
+        expResult = expResult.trim();
+        let evalResult = false;
+        if (!!expResult && expResult != "0" && !isErrorMeg(expResult))
+          evalResult = true;
 
-      let branchA = ast.children[1];
-      let branchB = ast.children[2];
-      if (evalResult) {
-        if (branchA) branchA._highlight = true;
-      } else {
-        if (branchB) branchB._highlight = true;
+        let branchA = ast.children[1];
+        let branchB = ast.children[2];
+        if (evalResult) {
+          if (branchA) branchA._highlight = true;
+        } else {
+          if (branchB) branchB._highlight = true;
+        }
+        break;
       }
-      break;
-    }
-    case "#ifexist:": {
-      // unreliable result.
-      // no highlighted node
-      // is considered an "expensive parser function"; only a limited number of which can be included on any one page (including functions inside transcluded templates). When this limit is exceeded, any further #ifexist: functions automatically return false, whether the target page exists or not
-      break;
-    }
-    case "#rel2abs:": {
-      // no highlighted node
-      break;
-    }
-    case "#switch:": {
-      let highlightedCase = -1;
-      let defaultCase;
-      for (let i = 1; i < ast.children.length; i++) {
-        let child = ast.children[i];
-        if (!child) break;
-        child.type = "case";
+      case "#ifexist:": {
+        // unreliable result.
+        // no highlighted node
+        // is considered an "expensive parser function"; only a limited number of which can be included on any one page (including functions inside transcluded templates). When this limit is exceeded, any further #ifexist: functions automatically return false, whether the target page exists or not
+        break;
+      }
+      case "#rel2abs:": {
+        // no highlighted node
+        break;
+      }
+      case "#switch:": {
+        let highlightedCase = -1;
+        let defaultCase;
+        for (let i = 1; i < ast.children.length; i++) {
+          let child = ast.children[i];
+          if (!child) break;
+          child.type = "case";
 
-        let nameNode = child.children[0];
-        if (child.children.length == 3) {
-          if (nameNode.length == 0) {
-            // name is an empty str
-            if (titleNode._eval.trim() == "") {
-              highlightedCase = i;
+          let nameNode = child.children[0];
+          if (child.children.length == 3) {
+            if (nameNode.length == 0) {
+              // name is an empty str
+              if (titleNode._eval.trim() == "") {
+                highlightedCase = i;
+              }
+            } else {
+              // name is not empty
+              child._eval = await apiEvalAsync(
+                src.substring(nameNode.start, nameNode.end + 1),
+                "",
+                url
+              );
+              child._eval = child._eval.replace("&#61;", "=");
+              if (child._eval.trim() == "#default") {
+                child.type = "default case";
+                defaultCase = child;
+              } else if (child._eval.trim() == titleNode._eval.trim()) {
+                highlightedCase = i;
+              }
             }
           } else {
-            // name is not empty
-            child._eval = await apiEvalAsync(
-              src.substring(nameNode.start, nameNode.end + 1),
-              "",
-              url
-            );
-            child._eval = child._eval.replace("&#61;", "=");
-            if (child._eval.trim() == "#default") {
+            if (i == ast.children.length - 1) {
               child.type = "default case";
               defaultCase = child;
-            } else if (child._eval.trim() == titleNode._eval.trim()) {
-              highlightedCase = i;
             }
+            // defaultCase
+            else {
+              child._eval = await apiEvalAsync(
+                src.substring(
+                  child.children[1].start,
+                  child.children[1].end + 1
+                ),
+                "",
+                url
+              );
+              child._eval = child._eval.replace("&#61;", "=");
+              if (child._eval.trim() == titleNode._eval.trim()) {
+                highlightedCase = i;
+              }
+            } // fall through
           }
-        } else {
-          if (i == ast.children.length - 1) {
-            child.type = "default case";
-            defaultCase = child;
-          }
-          // defaultCase
-          else {
-            child._eval = await apiEvalAsync(
-              src.substring(child.children[1].start, child.children[1].end + 1),
-              "",
-              url
-            );
-            child._eval = child._eval.replace("&#61;", "=");
-            if (child._eval.trim() == titleNode._eval.trim()) {
-              highlightedCase = i;
-            }
-          } // fall through
         }
-      }
-      if (highlightedCase >= 1) ast.children[highlightedCase]._highlight = true;
-      else if (defaultCase) defaultCase._highlight = true;
+        if (highlightedCase >= 1)
+          ast.children[highlightedCase]._highlight = true;
+        else if (defaultCase) defaultCase._highlight = true;
 
-      break;
+        break;
+      }
+      case "#time:":
+        // no highligh needed
+        break;
+      case "#timel:":
+        // no highligh needed
+        break;
+      case "#titleparts:":
+        break;
+      default:
     }
-    case "#time:":
-      // no highligh needed
-      break;
-    case "#timel:":
-      // no highligh needed
-      break;
-    case "#titleparts:":
-      break;
-    default:
   }
 };
 
