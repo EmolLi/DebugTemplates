@@ -1655,6 +1655,34 @@ let parserFunc = async (ext, func, ast, src, url, warnings) => {
       }
       default:
     }
+  } else if (ext == "stringFunctions") {
+    // switch (func) {
+    //   case "#len:": {
+    //     break;
+    //   }
+    //   case "#pos:": {
+    //     break;
+    //   }
+    //   case "#rpos:": {
+    //     break;
+    //   }
+    //   case "#sub:": {
+    //     break;
+    //   }
+    //   case "padleft:": {
+    //     break;
+    //   }
+    //   case "padright:": {
+    //     break;
+    //   }
+    //   case "#replace:": {
+    //     break;
+    //   }
+    //   case "#explode:": {
+    //     break;
+    //   }
+    //   default:
+    // }
   }
 };
 
