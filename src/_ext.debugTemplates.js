@@ -5,6 +5,9 @@
  * @license CC BY-SA 3.0
  **/
 
+// TODO: performance issue on highlight src code
+// TODO: refactor, config compiler
+
 const corsProxy = "https://gentle-taiga-41562.herokuapp.com/";
 function getUrl(url) {
   if (new URL(url).hostname != "localhost") {
@@ -121,7 +124,7 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
       unmatchedBracket: [],
       stepHistory: [{ title: "Main", params: [] }],
       params: [],
-      extensions: { parserFunctions: true }
+      extensions: { parserFunctions: true, variables: true }
     };
 
     SettingPanel() {
@@ -164,6 +167,19 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
               checked={extensions.parserFunctions}
             >
               Parser Functions
+            </Checkbox>
+            <Checkbox
+              onChange={e =>
+                this.setState({
+                  extensions: {
+                    ...extensions,
+                    variables: e.target.checked
+                  }
+                })
+              }
+              checked={extensions.variables}
+            >
+              Variables
             </Checkbox>
           </Panel>
         </Collapse>
@@ -822,350 +838,6 @@ function getXMLParser() {
   return null;
 }
 
-/**
- * Returns an HTML element for the given text.
- *
- * This may be a single text node, or a span with <br>'s inserted to mimic linebreaks.
- *
- * @param {string} txt Input plain text, possibly with linebreaks.
- * @param {string|null} cname Optional class name to put on the multi-line structure.
- * @return {HTMLElement}
- **/
-function textWithLinebreaks(txt, cname) {
-  var s = txt.split("\n");
-  if (s.length <= 1) {
-    return document.createTextNode(s[0]);
-  }
-  var h = document.createElement("span");
-  if (cname) {
-    h.className = cname;
-  }
-  h.appendChild(document.createTextNode(s[0]));
-  for (var i = 1; i < s.length; i++) {
-    h.appendChild(document.createElement("br"));
-    h.appendChild(document.createTextNode(s[i]));
-  }
-  return h;
-}
-
-/**
- * Cleans up the given text for transcluding by parsing through the includeonly, onlyinclude, and
- * noinclude tags and extracting what would be included.
- *
- * @param {string} text
- * @return {string}
- **/
-function transcludeText(text) {
-  return transcludeOnlyInclude(text);
-}
-
-/**
- * Clean up the given text by extracting any <onlyinclude> blocks, and then processing
- * the remainder for includeonly and noinclude.
- *
- * @param {string} text
- * @param {boolean} imeanit If true this indicates to return nothing if no <onlyinclude> blocks are
- *  found.  Used in recursive calls.
- * @return {string}
- **/
-function transcludeOnlyInclude(text, imeanit) {
-  var re = new RegExp("^((?:.|\\n)*?)(<onlyinclude\\s*/?>)((?:.|\\n)*)$", "i");
-  var m = re.exec(text);
-  if (!m) {
-    // No onlyinclude tag found
-    if (imeanit) {
-      return "";
-    }
-    return transcludeNoAndOnly(text);
-  }
-  if (m[2].indexOf("\\/>") > 0) {
-    // Singleton tag
-    return transcludeOnlyInclude(m[3], true);
-  }
-  // Look for a closing tag
-  // Note this is more restrictive, and not case-insensitive
-  var reEnd = new RegExp("^((?:.|\\n)*?)(</onlyinclude>)((?:.|\\n)*)$", "");
-  var mm = reEnd.exec(m[3]);
-  if (!mm) {
-    // No closing tag---opening tag doesn't count then
-    if (imeanit) {
-      return "";
-    }
-    return transcludeNoAndOnly(text);
-  }
-  // Ok, found some included text (contained in mm[1]), look for any more
-  return transcludeNoAndOnly(mm[1]) + transcludeOnlyInclude(mm[3], true);
-}
-
-/**
- * Clean up the given text by removing <noinclude> blocks and discarding <includeonly> tags.
- *
- * @param {string} text
- * @return {string}
- **/
-function transcludeNoAndOnly(text) {
-  var rc = "";
-  var re = new RegExp("^((?:.|\\n)*?)(<noinclude\\s*/?>)((?:.|\\n)*)$", "i");
-  var reIO = new RegExp("<includeonly\\s*/?>", "ig");
-  var m = re.exec(text);
-  if (!m) {
-    // No noinclude tags
-    return text.replace(reIO, "").replace("</includeonly>", "");
-  }
-  var singleTag = m[2].indexOf("\\/>") > 0;
-
-  // Certainly have the text prior to the tag
-  rc = m[1].replace(reIO, "").replace("</includeonly>", "");
-
-  // We have an outer noinclude.  Look for a closing tag, discard the enclosed text,
-  //  and recurse on the remainder.
-  // Note more restrictive, and not case-insensitive
-  var reEnd = new RegExp("^((?:.|\\n)*?)(</noinclude>)((?:.|\\n)*)$", "");
-  var mm = reEnd.exec(m[3]);
-  if (!mm) {
-    // No closing tag---assume it continues to the end
-    return rc;
-  }
-  return rc + transcludeNoAndOnly(mm[3]);
-}
-
-/**
- * Callback function which updates the view given the XML derived from the raw input.
- *
- * @param {string} x Well-formed XML as a string
- * @param {Object|null} inheritparams An optional set of parameters and their defined values which should
- *  be included in the list of input parameters constructed.
- **/
-function updateFromXML(x, inheritparams) {
-  var i, pname;
-  // First parse the xml and build an AST
-  ast = x === "" ? null : getXMLParser()(x);
-
-  // // Wipe out the global var of previous params and define a new set
-  // params = [];
-  //
-  // // Now extract all the parameters in the AST so we can build our parameter list
-  // var newparams = {};
-  // var astparams = null;
-  // if (ast) {
-  //   astparams = ast.getElementsByTagName("tplarg");
-  //   if (astparams) {
-  //     for (i = 0; i < astparams.length; i++) {
-  //       pname = getParamName(astparams[i], i);
-  //       if (newparams[pname] === undefined) {
-  //         newparams[pname] = true;
-  //         params.push({ name: pname, row: 0, used: true });
-  //       }
-  //     }
-  //   }
-  // }
-  // // Add in any in inheritparams
-  // if (inheritparams) {
-  //   for (var p in inheritparams) {
-  //     pname = p.trim();
-  //     if (newparams[pname] === undefined) {
-  //       newparams[pname] = true;
-  //       params.push({ name: pname, row: 0 });
-  //     }
-  //   }
-  // }
-  // // Now sort them alphabetically
-  // params.sort(function(a, b) {
-  //   return a.name.localeCompare(b.name);
-  // });
-  // // Create the mapping from AST nodes to their entry in the param array
-  // if (astparams) {
-  //   for (i = 0; i < astparams.length; i++) {
-  //     pname = getParamName(astparams[i], i);
-  //     // Look for it in our list of params
-  //     for (var j = 0; j < params.length; j++) {
-  //       if (params[j].name == pname) {
-  //         // Set the 'pindex' property to the row number
-  //         astparams[i].setAttribute("pindex", j);
-  //         break;
-  //       }
-  //     }
-  //   }
-  // }
-  //
-  // // Construct the params array
-  // updateParams(params, inheritparams);
-  // Construct the output
-  htmlFromAST(ast);
-}
-
-/**
- * Extracts a parameter name from a <tplarg> AST node.
- *
- * @param {XMLElement} node
- * @param {number|string} i Unique index used to help form a unique name when the parameter name is a
- *  constructed one.
- * @return {string}
- **/
-function getParamName(node, i) {
-  // This should not happen...
-  if (!node.firstChild.firstChild) {
-    return "";
-  }
-  // If the name itself is tree then we cannot determine the name until it has been fully parsed, so we
-  //  make something up using the unique index number given.
-  if (
-    node.firstChild.childNodes.length > 1 ||
-    node.firstChild.firstChild.nodeValue === null
-  ) {
-    return "<" + mw.message("debugtemplates-args-constructed") + i + ">";
-  }
-  return node.firstChild.firstChild.nodeValue.trim();
-}
-
-/**
- * Retrieves the manual value the user has associated with a parameter in the displayed list of
- * parameters.
- *
- * @param {number} pindex Row number of the corresponding parameter in the params array
- * @return {string|null} May return an empty string, so null is used to indicate a parameter that has not
- *  been set
- **/
-function getParamText(pindex) {
-  var rownum = params[pindex].row;
-  var row = document.getElementById("dt-argtable-row-number-" + rownum);
-  var ptext = row.cells[2].firstChild;
-  if (ptext.classList.contains("dt-arg-set-yes")) {
-    return ptext.value;
-  }
-  return null;
-}
-
-/**
- * Retrieves the DOM cell associated with the manual value of a parameter in the displayed list of
- * parameters.
- *
- * @param {string} name The name of the parameter
- * @param {HTMLElement|null} argtable The DOM node for the argtable <tbody>
- * @return {HTMLElement|null} Can return null if not found
- **/
-function getParamValue(name, argtable) {
-  if (!argtable) {
-    return null;
-  }
-  for (var i = 0; i < argtable.rows.length; i++) {
-    var celln = argtable.rows[i].cells[1].firstChild;
-    if (celln.nodeValue == name) {
-      return argtable.rows[i].cells[2].firstChild;
-    }
-  }
-  return null;
-}
-
-/**
- * Reconstructs the list of available parameters being displayed.
- *
- * @param {object} params The new set of parameters
- * @param {object|null} inheritparams The set of name -> value mappings that should initialize the displayed value
- **/
-function updateParams(params, inheritparams) {
-  var argtable = document.getElementById("dt-argtable");
-  var eall = mw.message("debugtemplates-args-eval-all");
-  // We are going to replace the entire table body and wipe out the existing one
-  var new_tbody = document.createElement("tbody");
-  // There may not be a tbody, so it can be null
-  var old_tbody = argtable.getElementsByTagName("tbody");
-  if (old_tbody) {
-    old_tbody = old_tbody[0];
-  }
-
-  // Now construct each row from a param
-  for (var i = 0; i < params.length; i++) {
-    var oldval = getParamValue(params[i].name, old_tbody);
-    var row = document.createElement("tr");
-
-    // First cell is the set/unset status
-    var c = document.createElement("td");
-    c.className = "dt-arg-centered";
-    // Create a toggle-able boolean value
-    var span = document.createElement("span");
-    if (
-      (inheritparams && inheritparams[params[i].name] !== undefined) ||
-      (oldval !== null && oldval.classList.contains("dt-arg-set-yes"))
-    ) {
-      span.appendChild(document.createTextNode(argy));
-    } else {
-      span.appendChild(document.createTextNode(argn));
-    }
-    span.addEventListener("click", paramSetHandler, false);
-    c.appendChild(span);
-    row.appendChild(c);
-
-    // Then create the parameter name
-    c = document.createElement("td");
-    c.appendChild(document.createTextNode(params[i].name));
-    row.appendChild(c);
-
-    // The parameter value is a textarea since it can be large, multiline text
-    c = document.createElement("td");
-    span = document.createElement("textarea");
-    if (
-      (inheritparams && inheritparams[params[i].name] !== undefined) ||
-      (oldval !== null && oldval.classList.contains("dt-arg-set-yes"))
-    ) {
-      span.setAttribute("class", "dt-arg-set-yes");
-    } else {
-      span.setAttribute("class", "dt-arg-set-no");
-    }
-    if (inheritparams && inheritparams[params[i].name] !== undefined) {
-      span.value = inheritparams[params[i].name];
-    } else if (oldval !== null) {
-      span.value = oldval.value;
-    } else {
-      span.value = "";
-    }
-    span.style.width = "95%";
-    c.appendChild(span);
-    row.appendChild(c);
-
-    // Then create the eval-all-instances button
-    c = document.createElement("td");
-    c.className = "dt-arg-centered";
-    span = document.createElement("input");
-    span.setAttribute("type", "button");
-    span.setAttribute("value", eall);
-    span.addEventListener("click", paramEval, false);
-    c.appendChild(span);
-    row.appendChild(c);
-
-    // Ensure the params entry's row field is correct
-    row.setAttribute("id", "dt-argtable-row-number-" + i);
-    if (!params[i].used) row.classList.add("dt-arg-unused");
-    new_tbody.appendChild(row);
-    params[i].row = i;
-  }
-  var prev = argtable.getElementsByTagName("tbody")[0];
-  if (prev) {
-    argtable.replaceChild(new_tbody, prev);
-  } else {
-    argtable.appendChild(new_tbody);
-  }
-}
-
-/**
- * Main entry point to construct the DOM tree from the AST and install it in the output pane.
- *
- * @param {XMLElement|null} ast
- **/
-function htmlFromAST(ast) {
-  // Reset our maximum index values and mappings between unique id numbers
-  nindex = 0;
-  nTox = {};
-  xindex = 0;
-  // No undo is possible after this
-  // resetButtonNode.setAttribute("disabled", "disabled");
-  // undoButtonNode.setAttribute("disabled", "disabled");
-  if (ast && ast.documentElement) {
-    var oh = htmlFromAST_r(ast.documentElement);
-    // setOutput(oh);
-  }
-}
-
 function getAst(node, parent = null) {
   if (!node) return null;
   let n = {
@@ -1460,6 +1132,9 @@ function includesUnmatchedBracket(str) {
 async function parserExtensions(ast, src, extensions, url, warnings = []) {
   if (extensions.parserFunctions) {
     await parserExtParserFunctions(ast, src, url, warnings);
+  }
+  if (extensions.variables) {
+    await parserExtVariables(ast, src, url, warnings);
   }
   // let title = await apiEvalAsync(titleSrc, "", url);
 }
@@ -1823,29 +1498,4 @@ async function getTitle(titleNode, url, src) {
     titleNode._value = await apiEvalAsync(titleSrc, "", url);
   }
   return titleNode._value;
-}
-/**
- * Handler for the parameter eval-all buttons.
- **/
-function paramEval() {
-  if (busy) {
-    return;
-  }
-  this.setAttribute("disabled", "disabled");
-  var row = this.parentNode.parentNode;
-  var pname = row.childNodes[1].firstChild;
-  if (!pname) {
-    return;
-  }
-  setBusy(true);
-  // We need to know our row number
-  var rown = row.id.replace(/[^0-9]*/g, "");
-  // Look through all the parameters displayed
-  var instances = document.getElementsByClassName("dt-node-tplarg");
-  // Start off a chain of individual lookups
-  if (instances) {
-    paramEvalNext(0, instances, rown);
-  } else {
-    setBusy(false);
-  }
 }

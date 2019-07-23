@@ -64,7 +64,7 @@ One or both of the return strings can be omitted. If the correct string is omitt
 
     An empty input expression evaluates to false:
 
-        {{#ifexpr: | yes | no}} → no    
+        {{#ifexpr: | yes | no}} → no
 
     As mentioned above, zero evaluates to false and any nonzero value evaluates to true, so this function is equivalent to one using #ifeq and #expr only:
 
@@ -272,9 +272,6 @@ A case string may be empty:
 Once a match is found, subsequent cases are ignored:
 
     {{#switch: b | f = Foo | b = Bar | b = Baz | }} → Bar
-
-//FIXME:
-    Raw equal signs
 
   "Case" strings cannot contain raw equals signs. To work around this, create a template {{=}} containing a single equals sign: =, or replace equals sign with html code &#61;.
 

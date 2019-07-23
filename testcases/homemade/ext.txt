@@ -1,0 +1,2 @@
+Template:includeonly, Template:noinclude, Template:onlyinclude, and Template:nowiki
+<nowiki>{{Test}}</nowiki>
