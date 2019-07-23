@@ -18,7 +18,7 @@ pre code {
   /* color: #c2c2c2; */
   background: none !important;
   border: none !important;
-  padding: none !important;
+  padding: 0px !important;
 }
 pre code.disabled {
   color: #c2c2c2;
