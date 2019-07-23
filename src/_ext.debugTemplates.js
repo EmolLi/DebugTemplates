@@ -124,7 +124,11 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
       unmatchedBracket: [],
       stepHistory: [{ title: "Main", params: [] }],
       params: [],
-      extensions: { parserFunctions: true, variables: true }
+      extensions: {
+        parserFunctions: true,
+        variables: true,
+        stringFunctions: true
+      }
     };
 
     SettingPanel() {
@@ -180,6 +184,19 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
               checked={extensions.variables}
             >
               Variables
+            </Checkbox>
+            <Checkbox
+              onChange={e =>
+                this.setState({
+                  extensions: {
+                    ...extensions,
+                    stringFunctions: e.target.checked
+                  }
+                })
+              }
+              checked={extensions.stringFunctions}
+            >
+              String Functions
             </Checkbox>
           </Panel>
         </Collapse>
@@ -1138,7 +1155,9 @@ async function parserExtensions(ast, src, extensions, url, warnings = []) {
     _variables = {};
     await parserExtInTemplateSyntax(ast, src, url, warnings, "variables");
   }
-  // let title = await apiEvalAsync(titleSrc, "", url);
+  if (extensions.stringFunctions) {
+    await parserExtInTemplateSyntax(ast, src, url, warnings, "stringFunctions");
+  }
 }
 
 // ===================== EXT: variables ============================
@@ -1181,8 +1200,7 @@ const variablesUtilsConfigs = {
     argCnt: 2,
     nodeType: "#var_final",
     titleNodeType: "output final value for variable",
-    otherNodeTypes: ["default value"],
-    evalOtherNodes: true
+    otherNodeTypes: ["default value"]
   }
 };
 
@@ -1229,8 +1247,7 @@ const parserFunctionsConfigs = {
     argCnt: 3,
     nodeType: "#ifexpr",
     titleNodeType: "if expr",
-    otherNodeTypes: ["then", "else"],
-    evalOtherNodes: true
+    otherNodeTypes: ["then", "else"]
   }, //    {{#ifexpr: expression | value if true | value if false }}
   "#ifexist:": {
     argCnt: 3,
@@ -1281,6 +1298,67 @@ const parserFunctionsConfigs = {
   } //{{#titleparts: pagename | number of segments to return | first segment to return }}
 };
 
+const supportedStringFunctions = {
+  "#len:": "#len:",
+  "#pos:": "#pos:",
+  "#rpos:": "#rpos:",
+  "#sub:": "#sub:",
+  "padleft:": "padleft:",
+  "padright:": "padright:",
+  "#replace:": "#replace:",
+  "#explode:": "#explode:"
+};
+//#urlencode #urldecode not supported
+const stringFunctionsConfigs = {
+  "#len:": {
+    argCnt: 1,
+    nodeType: "#len",
+    titleNodeType: "length of str",
+    otherNodeTypes: []
+  },
+  "#pos:": {
+    argCntLE: 3,
+    nodeType: "#pos",
+    titleNodeType: "search in str",
+    otherNodeTypes: ["search term", "offset"]
+  },
+  "#rpos:": {
+    argCnt: 2,
+    nodeType: "#rpos",
+    titleNodeType: "search in str",
+    otherNodeTypes: ["search term"]
+  },
+  "#sub:": {
+    argCntLE: 3,
+    nodeType: "#sub",
+    titleNodeType: "substring",
+    otherNodeTypes: ["start", "length"]
+  },
+  "#replace:": {
+    argCnt: 3,
+    nodeType: "#replace",
+    titleNodeType: "replace pattern in str",
+    otherNodeTypes: ["pattern", "replacement term"]
+  },
+  "#explode:": {
+    argCntLE: 4,
+    nodeType: "#explode",
+    titleNodeType: "split str",
+    otherNodeTypes: ["delimiter", "position", "limit"]
+  },
+  "padleft:": {
+    argCntLE: 3,
+    nodeType: "padleft",
+    titleNodeType: "insert padding",
+    otherNodeTypes: ["length", "padstring"]
+  },
+  "padright:": {
+    argCntLE: 3,
+    nodeType: "padright",
+    titleNodeType: "insert padding",
+    otherNodeTypes: ["length", "padstring"]
+  }
+};
 const extConfigs = {
   parserFunctions: {
     supportedUtils: supportedParserFunctions,
@@ -1289,6 +1367,10 @@ const extConfigs = {
   variables: {
     supportedUtils: supportedVariablesUtils,
     configs: variablesUtilsConfigs
+  },
+  stringFunctions: {
+    supportedUtils: supportedStringFunctions,
+    configs: stringFunctionsConfigs
   }
 };
 // ===================== EXT: parser functions =====================

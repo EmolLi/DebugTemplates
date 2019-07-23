@@ -1,0 +1,195 @@
+#len:
+The #len parser function was merged into the ParserFunctions extension as of version 1.2.0
+
+The #len function returns the length of the given string. The syntax is:
+
+{{#len:string}}
+
+The return value is always a number of characters in the source string (after expansions of template invocations, but before conversion to HTML). If no string is specified, the return value is zero.
+
+Notes
+
+    This function is safe with UTF-8 multibyte characters. Example:
+        {{#len:Žmržlina}} → 8
+    Leading and trailing spaces or newlines are not counted, but intermediate spaces and newlines are taken into account. Examples:
+        {{#len:Icecream }} → 8
+        {{#len: a   b }} → 5 (3 spaces between 2 characters)
+    Characters given by reference are not converted, but counted according to their source form.
+        {{#len:&nbsp;}} → 6 (named characters references).
+        {{#len:&#32;}} → 5 (numeric characters references, not ignored despite it designates a space here).
+    Tags such as <nowiki> and other tag extensions will always have a length of zero, since their content is hidden from the parser. Example:
+        {{#len:<nowiki>This is a </nowiki>test}} → 4
+
+#pos:
+The #pos parser function was merged into the ParserFunctions extension as of version 1.2.0
+
+The #pos function returns the position of a given search term within the string. The syntax is:
+
+{{#pos:string|search term|offset}}
+
+The offset parameter, if specified, tells a starting position where this function should begin searching.
+
+If the search term is found, the return value is a zero-based integer of the first position within the string.
+
+If the search term is not found, the function returns an empty string.
+
+Notes:
+
+    This function is case sensitive.
+    The maximum allowed length of the search term is limited through the $wgStringFunctionsLimitSearch global setting.
+    This function is safe with UTF-8 multibyte characters. Example: {{#pos:Žmržlina|žlina}} returns 3.
+    As with #len, <nowiki> and other tag extensions are treated as having a length of 1 for the purposes of character position. Example: {{#pos:<nowiki>This is a </nowiki>test|test}} returns 1.
+
+#rpos:
+The #rpos parser function was merged into the ParserFunctions extension as of version 1.2.0
+
+The #rpos function returns the last position of a given search term within the string. The syntax is:
+
+ {{#rpos:string|search term}}
+
+If the search term is found, the return value is a zero-based integer of its last position within the string.
+
+If the search term is not found, the function returns -1.
+
+Tip: When using this to search for the last delimiter, add +1 to the result to retrieve position after the last delimiter. This also works when the delimiter is not found, because "-1 + 1" is zero, which is the beginning of the given value.
+
+Notes:
+
+    This function is case sensitive.
+    The maximum allowed length of the search term is limited through the $wgStringFunctionsLimitSearch global setting.
+    This function is safe with UTF-8 multibyte characters. Example: {{#rpos:Žmržlina|lina}} returns 4.
+    As with #len, <nowiki> and other tag extensions are treated as having a length of 1 for the purposes of character position. Example: {{#rpos:<nowiki>This is a </nowiki>test|test}} returns 1.
+
+#sub:
+The #sub parser function was merged into the ParserFunctions extension as of version 1.2.0
+
+The #sub function returns a substring from the given string. The syntax is:
+
+{{#sub:string|start|length}}
+
+The start parameter, if positive (or zero), specifies a zero-based index of the first character to be returned.
+
+Example: {{#sub:Icecream|3}} returns cream.
+
+{{#sub:Icecream|0|3}} returns Ice.
+
+If the start parameter is negative, it specifies how many characters from the end should be returned.
+
+Example: {{#sub:Icecream|-3}} returns eam.
+
+The length parameter, if present and positive, specifies the maximum length of the returned string.
+
+Example: {{#sub:Icecream|3|3}} returns cre.
+
+If the length parameter is negative, it specifies how many characters will be omitted from the end of the string.
+
+Example: {{#sub:Icecream|3|-3}} returns cr.
+
+If the start parameter is negative, it specifies how many characters from the end should be returned. The length parameter, if present and positive, specifies the maximum length of the returned string from the starting point.
+
+Example: {{#sub:Icecream|-3|2}} returns ea.
+
+Notes:
+
+    If the length parameter is zero, it is not used for truncation at all.
+        Example: {{#sub:Icecream|3|0}} returns cream, {{#sub:Icecream|0|3}} returns Ice.
+    If start denotes a position beyond the truncation from the end by negative length parameter, an empty string will be returned.
+        Example: {{#sub:Icecream|3|-6}} returns an empty string.
+    This function is safe with UTF-8 multibyte characters. Example: {{#sub:Žmržlina|3}} returns žlina.
+    As with #len, <nowiki> and other tag extensions are treated as having a length of 1 for the purposes of character position. Example: {{#sub:<nowiki>This is a </nowiki>test|1}} returns test.
+
+
+
+    {{padleft:xyz|stringlength}}
+
+    {{padleft:xyz|strlen|char}}
+    {{padleft:xyz|strlen|string}}
+    	{{padleft:xyz|5}} → 00xyz
+
+    {{padleft:xyz|5|_}} → __xyz
+    {{padleft:xyz|5|abc}} → abxyz
+    {{padleft:xyz|2}} → xyz
+    {{padleft:|1|xyz}} → x (first character of the string)
+    	Inserts a string of padding characters (character chosen in third parameter; default "0") of a specified length (second parameter) next to a chosen base character or variable (first parameter). The final digits or characters in the base replace the final characters in the padding; i.e. {{padleft:44|3|0}} produces 044. The padding string may be truncated if its length does not evenly divide the required number of characters.
+
+    Only the first character of the third parameter is used in versions up to 1.12, but by version 1.15, all the characters are used.
+
+    {{padright:xyz|stringlength}}
+    {{padright:xyz|strlen|char}}
+    {{padright:xyz|strlen|string}} 	{{padright:xyz|5}} → xyz00
+
+    {{padright:xyz|5|_}} → xyz__
+    {{padright:xyz|5|abc}} → xyzab
+    {{padright:xyz|2}} → xyz
+    {{padright:|1|xyz}} → x
+
+
+
+#replace:
+The #replace parser function was merged into the ParserFunctions extension as of version 1.2.0
+
+The #replace function returns the given string with all occurrences of a search term replaced with a replacement term.
+
+{{#replace:string|search term|replacement term}}
+
+If the search term is unspecified or empty, a single space will be searched for.
+
+If the replacement term is unspecified or empty, all occurrences of the search term will be removed from the string.
+
+Notes:
+
+    This function is case-sensitive.
+    The maximum allowed length of the search term is limited through the $wgStringFunctionsLimitSearch global setting.
+    The maximum allowed length of the replacement term is limited through the $wgStringFunctionsLimitReplace global setting.
+    Even if the replacement term is a space, an empty string is used. This is a side-effect of the MediaWiki parser. To use a space as the replacement term, put it in nowiki tags.
+        Example: {{#replace:My_little_home_page|_|<nowiki> </nowiki>}} returns My little home page.
+        If this doesn't work, try {{#replace:My_little_home_page|_|<nowiki/> <nowiki/>}} with two self-closing tags.
+        Note that this is the only acceptable use of nowiki in the replacement term, as otherwise nowiki could be used to bypass $wgStringFunctionsLimitReplace, injecting an arbitrarily large number of characters into the output. For this reason, all occurrences of <nowiki> or any other tag extension within the replacement term are replaced with spaces.
+    This function is safe with UTF-8 multibyte characters. Example: {{#replace:Žmržlina|ž|z}} returns Žmrzlina.
+    If multiple items in a single text string need to be replaced, one could also consider Extension:ReplaceSet. It adds a parser function for a sequence of replacements.
+
+Case-insensitive replace
+
+Currently the syntax doesn't provide a switch to toggle case-sensitivity setting. But you may make use of magic words of formatting (e.g. {{lc:your_string_here}}) as a workaround. For example, if you want to remove the word "Category:" from the string regardless of its case, you may type:
+
+{{#replace:{{lc:{{{1}}}}}|category:|}}
+
+But the disadvantage is that the output will become all lower-case. If you want to keep the casing after replacement, you have to use multiple nesting levels (i.e. multiple replace calls) to achieve the same thing.
+#explode:
+The #explode parser function was merged into the ParserFunctions extension as of version 1.2.0
+
+The #explode function splits the given string into pieces and then returns one of the pieces. The syntax is:
+
+{{#explode:string|delimiter|position|limit}}
+
+The delimiter parameter specifies a string to be used to divide the string into pieces. This delimiter string is then not part of any piece, and when two delimiter strings are next to each other, they create an empty piece between them. If this parameter is not specified, a single space is used. The limit parameter is available in ParserFunctions only, not the standalone StringFunctions version, and allows you to limit the number of parts returned, with all remaining text included in the final part.
+
+The position parameter specifies which piece is to be returned. Pieces are counted from 0. If this parameter is not specified, the first piece is used (piece with number 0). When a negative value is used as position, the pieces are counted from the end. In this case, piece number -1 means the last piece. Examples:
+
+    {{#explode:And if you tolerate this| |2}} returns you.
+    {{#explode:String/Functions/Code|/|-1}} returns Code.
+    {{#explode:Split%By%Percentage%Signs|%|2}} returns Percentage.
+    {{#explode:And if you tolerate this| |2|3}} returns you tolerate this.
+
+The return value is the position-th piece. If there are fewer pieces than the position specifies, an empty string is returned.
+
+Notes:
+
+    This function is case sensitive.
+    The maximum allowed length of the delimiter is limited through $wgStringFunctionsLimitSearch global setting.
+    This function is safe with UTF-8 multibyte characters. Example: {{#explode:Žmržlina|ž|1}} returns lina.
+
+#urlencode: and #urldecode:
+The #urlencode parser functions was NOT merged into the ParserFunctions extension. As an alternative, see the urlencode parser function provided by MediaWiki core. #urldecode was not initially merged into ParserFunctions, but was added later on (in 2010, by commit 1b75afd18d3695bdb6ffbfccd0e4aec064785363).
+
+These two functions operate in tandem: #urlencode converts a string into a URL-safe syntax, and #urldecode converts such a string back. The syntax is:
+
+{{#urlencode:value}}
+{{#urldecode:value}}
+
+Notes:
+
+    These functions work by directly exposing PHP's urlencode() and urldecode() functions.
+    For anchors within a page use {{anchorencode}} instead of {{#urlencode}}. The results of a call to {{anchorencode}} are compatible with intra-page references generated with [[#link]] syntax, while {{#urlencode}}-generated values are not necessarily so.
+    urlencode has been integrated into Extension:ParserFunctions. Note that within the ParserFunction extension the function is called with {{urlencode:value}} instead of {{#urlencode:value}}. The ParserFunctions extension has been integrated into MediaWiki as of version 1.18; for examples see Help:Magic Words.
+    urldecode works the other way round and turns URL encoded strings into readable strings. A character-code-reference can be found at www.w3schools.com.

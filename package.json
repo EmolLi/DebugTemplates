@@ -2,10 +2,11 @@
   "private": true,
   "scripts": {
     "test": "grunt test",
-    "babel": "babel --presets @babel/preset-react _ext.debugTemplates.js -o ext.debugTemplates.js"
+    "babel": "babel --presets @babel/preset-react src/_ext.debugTemplates.js -o ext.debugTemplates.js"
   },
   "devDependencies": {
     "@babel/core": "^7.4.5",
+    "@babel/plugin-proposal-class-properties": "^7.5.5",
     "@babel/preset-react": "^7.0.0",
     "babel-plugin-transform-react-jsx": "^6.24.1",
     "grunt": "1.0.3",
