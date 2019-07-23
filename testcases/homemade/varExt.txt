@@ -1,3 +1,14 @@
+{{#vardefine:iconwidth|25}}
+{{#vardefine:iconwidth2|25}}
+{{#vardefine:{{Test}}|25}}
+{{#var:{{Test}}1|22}}
+{{#var:{{Test}}|22}}
+{{#varexists: {{Test}} | if-value | else-value }}
+{{#varexists: iconwidth3 | if-value | else-value }}
+
+
+
+
 
 #vardefine
 {{#vardefine:variablename|specifiedvalue}}
@@ -11,7 +22,7 @@ Example: making iconwidth = <code>{{#vardefineecho:iconwidth|25}}</code>
 Retrieving the value of a variable
 #var
 The value of the variable variablename is produced by
-
+The
 {{#var:variablename}}
 If undefined, this produces an empty string; it does not give an error message.
 
@@ -20,6 +31,7 @@ It is possible to define a value for the case that the variable is undefined or 
 {{#var:variablename | defaultvalue }}
 This is equivalent to:
 
+// FIXME: eval parserFunc in combination with variables ext
 {{#if: {{#var:variablename}} | {{#var:variablename }} | defaultvalue }}
 but it is much shorter and better arranged. Before version 2.0 though, the default value always was expanded. From version 2.0 on the default only gets expanded in case it is actually used.
 

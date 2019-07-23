@@ -1128,11 +1128,14 @@ function includesUnmatchedBracket(str) {
   if (unmatched.length > 0) return unmatched;
 }
 
+let _variables;
+
 async function parserExtensions(ast, src, extensions, url, warnings = []) {
   if (extensions.parserFunctions) {
     await parserExtInTemplateSyntax(ast, src, url, warnings, "parserFunctions");
   }
   if (extensions.variables) {
+    _variables = {};
     await parserExtInTemplateSyntax(ast, src, url, warnings, "variables");
   }
   // let title = await apiEvalAsync(titleSrc, "", url);
@@ -1177,7 +1180,7 @@ const variablesUtilsConfigs = {
   "#var_final:": {
     argCnt: 2,
     nodeType: "#var_final",
-    titleNodeType: "set final value for variable",
+    titleNodeType: "output final value for variable",
     otherNodeTypes: ["default value"],
     evalOtherNodes: true
   }
@@ -1530,6 +1533,44 @@ let parserFunc = async (ext, func, ast, src, url, warnings) => {
         break;
       case "#titleparts:":
         break;
+      default:
+    }
+  } else if (ext == "variables") {
+    switch (func) {
+      case "#vardefine:": {
+        let varName = titleNode._eval.trim();
+        _variables[varName] = true;
+        break;
+      }
+
+      case "#vardefineecho:": {
+        let varName = titleNode._eval.trim();
+        _variables[varName] = true;
+        break;
+      }
+      case "#var:": {
+        let varName = titleNode._eval.trim();
+        if (!_variables[varName] && ast.children.length >= 2) {
+          ast.children[1]._highlight = true;
+          _variables[varName] = true;
+        }
+        break;
+      }
+      case "#varexists:": {
+        let varName = titleNode._eval.trim();
+        if (_variables[varName] && ast.children.length >= 2) {
+          ast.children[1]._highlight = true;
+        } else if (!_variables[varName] && ast.children.length >= 3) {
+          ast.children[2]._highlight = true;
+        }
+        break;
+      }
+      case "#var_final:": {
+        let varName = titleNode._eval.trim();
+        if (!_variables[varName] && ast.children.length >= 2)
+          ast.children[1]._highlight = true;
+        break;
+      }
       default:
     }
   }
