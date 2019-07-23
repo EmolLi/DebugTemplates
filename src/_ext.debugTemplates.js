@@ -1167,19 +1167,21 @@ function htmlFromAST(ast) {
   }
 }
 
-function getAst(node) {
+function getAst(node, parent = null) {
   if (!node) return null;
   let n = {
     type: node.tagName,
     value: node.nodeValue,
     children: [],
-    id: nindex++
+    id: nindex++,
+    parent
   };
-  node.childNodes.forEach(c => n.children.push(getAst(c)));
+  node.childNodes.forEach(c => n.children.push(getAst(c, node)));
   return n;
 }
 
 function mapAstToSrc(ast, src) {
+  debugger;
   let { templatesAndParams, unmatchedBracket } = extractTemplatesAndParams(ast);
   let stack_ast = [];
   let stack_src = [];
@@ -1236,6 +1238,7 @@ function mapAstToSrc(ast, src) {
       ));
     }
 
+    debugger;
     // match ends
     matchEnd: while (src_i < src.length) {
       let c = src.charAt(src_i);
@@ -1248,6 +1251,7 @@ function mapAstToSrc(ast, src) {
             if (src.charAt(src_j) == ">") {
               curr.end = src_j;
               src_i = src_j + 1;
+              c = src.charAt(src_i);
 
               stack_ast.splice(stack_ast.length - 1, 1); // pop
               if (stack_ast.length == 0) break matchEnd;
@@ -1259,8 +1263,7 @@ function mapAstToSrc(ast, src) {
               } = getExpectedPattern(curr));
               break;
             }
-          }
-          src_i++;
+          } else src_i++;
         }
       }
 
@@ -1325,7 +1328,13 @@ function mapAstToSrc(ast, src) {
         curr.children[0].start = curr.start + expectedStartLen;
         curr.children[0].end = src_i - 1;
         break;
-      } else if (c == "{" && curr.type != "ext") break;
+      } else if (
+        c == "<" &&
+        templatesAndParams[ast_i] &&
+        templatesAndParams[ast_i].type == "ext"
+      )
+        break;
+      else if (c == "{") break;
       // match next
       else if (c == "}") {
         if (
@@ -1377,7 +1386,7 @@ function extractTemplatesAndParams(ast) {
     )
       templatesAndParams.push(curr);
     if (curr.value) {
-      if (curr.value == "=") {
+      if (curr.value == "=" && curr.parent && curr.parent.type == "part") {
         templatesAndParams.push({ ...curr, type: "assignmentSign" });
       } else {
         let unmacthed = includesUnmatchedBracket(curr.value);
@@ -1387,24 +1396,11 @@ function extractTemplatesAndParams(ast) {
         }
       }
     }
-    if (!curr.children) continue;
+    if (!curr.children || curr.type == "ext") continue;
     for (let j = curr.children.length - 1; j >= 0; j--) {
       stack_tree_explore.push(curr.children[j]);
     }
   }
-
-  // name after nowiki should be removed
-  let i = 0;
-  while (i < templatesAndParams.length - 1) {
-    if (
-      templatesAndParams[i].type == "ext" &&
-      templatesAndParams[i + 1].type == "name"
-    ) {
-      templatesAndParams.splice(i + 1, 1);
-      i++;
-    }
-  }
-
   return { templatesAndParams, unmatchedBracket };
 }
 
