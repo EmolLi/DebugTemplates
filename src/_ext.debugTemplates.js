@@ -901,6 +901,13 @@ function mapAstToSrc(ast, src) {
             curr.start = src_i;
             src_i = src_j + 1;
             break;
+          } else if (src.substr(src_j, 2) == "/>") {
+            // <nowiki /> self closing tag
+            curr.start = src_i;
+            curr.end = src_j + 1;
+            src_i = src_j + 2;
+            expectedStartLen = 0;
+            break;
           }
         }
 
