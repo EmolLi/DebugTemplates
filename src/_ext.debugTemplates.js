@@ -20,6 +20,17 @@ function getUrl(url) {
 const NODE_TYPE = {
   template: "template"
 };
+const EXTENSIONS = {
+  parserFunctions: "parserFunctions",
+  variables: "variables",
+  stringFunctions: "stringFunctions"
+};
+const EXTENSIONS_FORMATTED = {
+  parserFunctions: "Parser Functions",
+  variables: "Variables",
+  stringFunctions: "String Functions"
+};
+
 let root = document.getElementById("debug-template-debugger");
 
 let libs = [
@@ -159,45 +170,24 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
               value={homePageUrl}
               onChange={e => this.setState({ homePageUrl: e.target.value })}
             />
-            <Checkbox
-              onChange={e =>
-                this.setState({
-                  extensions: {
-                    ...extensions,
-                    parserFunctions: e.target.checked
+            <div id="supported-ext">
+              {Object.keys(EXTENSIONS).map(ext => (
+                <Checkbox
+                  key={ext}
+                  onChange={e =>
+                    this.setState({
+                      extensions: {
+                        ...extensions,
+                        [ext]: e.target.checked
+                      }
+                    })
                   }
-                })
-              }
-              checked={extensions.parserFunctions}
-            >
-              Parser Functions
-            </Checkbox>
-            <Checkbox
-              onChange={e =>
-                this.setState({
-                  extensions: {
-                    ...extensions,
-                    variables: e.target.checked
-                  }
-                })
-              }
-              checked={extensions.variables}
-            >
-              Variables
-            </Checkbox>
-            <Checkbox
-              onChange={e =>
-                this.setState({
-                  extensions: {
-                    ...extensions,
-                    stringFunctions: e.target.checked
-                  }
-                })
-              }
-              checked={extensions.stringFunctions}
-            >
-              String Functions
-            </Checkbox>
+                  checked={extensions[ext]}
+                >
+                  {EXTENSIONS_FORMATTED[ext]}
+                </Checkbox>
+              ))}
+            </div>
           </Panel>
         </Collapse>
       );
@@ -395,17 +385,26 @@ Promise.all(libs.map(lib => loadjs(lib[0], lib[1]))).then(async () => {
       const { type, value, id, children } = node;
       return (
         <div>
-          {type}
+          {this.formatType(type)}
           {this.formatValue(value)}
           {this.formatEval(node._eval)}
-          {node._highlight ? "  <SELECTED>" : ""}
+          {node._highlight ? <Tag color="green">⇦</Tag> : null}
         </div>
       );
     }
 
     formatType(type) {
       if (!type) return null;
-      return <Tag color="magenta">{type}</Tag>;
+      switch (type) {
+        case "part":
+          return "parameter";
+        case "tplarg":
+          return "argument";
+        case "ext":
+          return "nowiki";
+        default:
+          return type;
+      }
     }
     formatValue(value) {
       if (!value) return null;

@@ -2,6 +2,12 @@
   background: transparent;
   border: 0;
 }
+
+.ant-tag {
+  padding-top: 1px !important;
+  margin-left: 5px !important;
+}
+
 pre.debugger-input-textarea-pre {
   height: 400px !important;
   overflow: scroll;
@@ -40,6 +46,9 @@ pre code.disabled {
 /* height: 30px; */
 /* } */
 
+#supported-ext {
+  margin: 5px 0px auto;
+}
 .debugger-section {
   padding: 0px 24px 25px;
   color: rgba(0, 0, 0, 0.65);
