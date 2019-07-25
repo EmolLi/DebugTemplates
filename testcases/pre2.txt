@@ -1,0 +1,36 @@
+<pre>
+{{Addon Infobox
+ | Name =
+ | Summary =
+ | TOC =
+ | Category =
+ | Author =
+ | WoWI =
+ | Curse =
+ | CurseId =
+ | Google =
+ | Releases =
+ | Changelog =
+ | Discussion =
+ | Bugtracker =
+ | old =
+}}
+</pre>
+
+:old= [0,1] (Optional)  Set to 1 to mark as severely out of date, or no longer in service.
+:Name=  The name of the addon. Defaults to <nowiki>{{PAGENAME}}</nowiki>.
+:Summary=  Summary of what the addon does.
+:TOC=  Current TOC that the addon uses.
+:Category=  What kind of addon it is.
+:Author=  Author of the addon.
+:WoWI=  ID of the addon at {{wowi}}, see {{t|wowi}}.
+:Curse=  ID name, like 'baggins', of the addon at {{curse}}, see {{t|curse}}.
+:CurseId=  Old ID number of the addon at {{curse}}, formerly Curse Gaming, saved for reference.
+:Google=  ID or path of the addon at {{google}}, see {{t|google}}.
+:GitHub=  ID or path of the tool or application at {{github}}, see {{t|github}}.
+:Releases=  Other external site for list of releases.
+:Changelog=  List of release versions.
+:Discussion=  External link for discussing the addon. Use {{t|wowace}}, {{t|curseforge}}, {{t|wowi}}, etc.. directly.
+:Bugtracker=  External link for bugtracking. Use similar to discussion.
+
+<noinclude>[[Category:Template documentation|{{PAGENAME}}]]</noinclude>

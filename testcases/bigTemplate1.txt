@@ -1,0 +1,42 @@
+<noinclude>[[Category:Navigation templates|{{PAGENAME}}]]
+</noinclude>{{navbox with collapsible groups
+|name=Hunter pets
+|title=[[Hunter]] [[Hunter pets|pets]] and [[Hunter abilities/Pet abilities|abilities]]
+
+|group1=[[Beast]]s
+|list1={{m-inline}} [[Basilisk]]{{·}} [[Bat]]{{·}} [[Bear]]{{·}} {{c-inline}} [[Beetle]]{{·}} [[Boar]]{{·}} [[Bird of prey|Birds of prey]] ({{w-inline}} [[Eagle]]{{·}} {{w-inline}} [[Hawk]]{{·}} [[Owl]]{{·}} [[Parrot]]{{·}} [[Seagull]]){{·}} [[Carrion bird]]s ([[Buzzard]]{{·}} [[Condor]]{{·}} [[Roc]]{{·}} [[Vulture]]{{·}} [[Swoop]]){{·}} [[Feline|Cat]]{{·}} [[Crab]]{{·}} {{m-inline}} [[Crane]]{{·}} [[Crocolisk]]{{·}} {{m-inline}} [[Direhorn]]{{·}} {{c-inline}} [[Dog]]{{·}} {{bc-inline}} [[Dragonhawk]]{{·}} {{c-inline}} [[Fox]]{{·}} {{m-inline}} [[Goat]]{{·}} [[Gorilla]]{{·}} {{wl-inline}} [[Hydra]]{{·}} [[Hyena]]{{·}} {{c-inline}} [[Monkey]]{{·}} {{bc-inline}} [[Moth]]{{·}} {{bc-inline}} [[Nether ray]]{{·}} {{m-inline}} [[Porcupine]]{{·}} [[Raptor]]{{·}} {{bc-inline}} [[Ravager]]{{·}} {{wl-inline}} [[Riverbeast]]{{·}} {{wl-inline}} [[Rylak]]{{·}} [[Scorpid]]{{·}} [[Serpent]]{{·}} [[Spider]]{{·}} {{bc-inline}} [[Spore bat]]{{·}} {{wl-inline}} [[Stag]]{{·}} [[Tallstrider]]{{·}} [[Turtle]]{{·}} {{bc-inline}} [[Warp stalker]]{{·}} {{bc-inline}} [[Wasp]]{{·}} [[Wind serpent]]{{·}} [[Wolf]]
+
+|group2=[[Exotic beast]]s
+|list2={{w-inline}} [[Chimaera]]{{·}} {{wl-inline}} [[Clefthoof]]{{·}} {{w-inline}} [[Core hound]]{{·}} {{w-inline}} [[Devilsaur]]{{·}} {{m-inline}} [[Quilen]]{{·}} {{w-inline}} [[Rhinoceros|Rhino]]{{·}} {{wl-inline}} [[Rylak]]{{·}} {{c-inline}} [[Shale spider]]{{·}} {{w-inline}} [[Silithid]]{{·}} {{w-inline}} [[Spirit beast]]{{·}} {{m-inline}} [[Water strider]]{{·}} {{w-inline}} [[Worm]]
+
+|group3=[[Active]] abilities
+|list3={{navbox|child
+|group1={{wow-inline}}
+|list1=<s>[[Acid Spit]]</s>{{·}} [[Bite]]{{·}} [[Claw (pet)|Claw]]{{·}} <s>[[Cower (pet)|Cower]]</s>{{·}} <s>[[Demoralizing Screech]]</s>{{·}} <s>[[Dust Cloud]]</s>{{·}} [[Froststorm Breath]]{{·}} [[Furious Howl]]{{·}} <s>[[Gore]]</s>{{·}} [[Growl (pet)|Growl]]{{·}} <s>[[Lava Breath]]</s>{{·}} <s>[[Lightning Breath]]</s>{{·}} [[Monstrous Bite]]{{·}} <s>[[Pin]]</s>{{·}} [[Prowl (pet)|Prowl]]{{·}} [[Shell Shield]]{{·}} [[Smack]]{{·}} <s>[[Snatch]]</s>{{·}} <s>[[Sonic Blast]]</s>{{·}} <s>[[Venom Web Spray]]</s>{{·}} <s>[[Web]]</s>
+
+|group2={{bc-inline}}
+|list2=<s>[[Fire Breath]]</s>{{·}} <s>[[Nether Shock]]</s>{{·}} <s>[[Ravage (pet)|Ravage]]</s>{{·}} <s>[[Serenity Dust]]</s>{{·}} <s>[[Spore Cloud]]</s>{{·}} <s>[[Sting]]</s>
+
+|group3={{wotlk-inline}}
+|list3=[[Avoidance (passive)|Avoidance]]{{·}} <s>[[Pummel (pet)|Pummel]]</s>{{·}} <s>[[Stampede]]</s>
+
+|group4={{cata-inline}}
+|list4=[[Ancient Hysteria]]{{·}} [[Ankle Crack]]{{·}} <s>[[Bad Manner]]</s>{{·}} [[Burrow Attack]]{{·}} <s>[[Clench]]</s>{{·}} <s>[[Demoralizing Roar (pet)|Demoralizing Roar]]</s>{{·}} [[Embrace of the Shale Spider]]{{·}} [[Frost Breath]]{{·}} [[Harden Carapace]]{{·}} <s>[[Horn Toss]]</s>{{·}} <s>[[Lock Jaw]]</s>{{·}} [[Play]]{{·}} [[Qiraji Fortitude]]{{·}} [[Roar of Courage]]{{·}} [[Spirit Mend]]{{·}} [[Spirit Walk]]{{·}} <s>[[Tailspin]]</s>{{·}} <s>[[Tear Armor]]</s>{{·}} [[Terrifying Roar]]{{·}} <s>[[Time Warp (pet)|Time Warp]]</s>{{·}} <s>[[Web Wrap (pet)|Web Wrap]]</s>
+
+|group5={{mists-inline}}
+|list5=[[Cackling Howl]]{{·}} [[Eternal Guardian]]{{·}} [[Fearless Roar]]{{·}} <s>[[Lullaby]]</s>{{·}} <s>[[Paralyzing Quill]]</s>{{·}} <s>[[Petrifying Gaze]]</s>{{·}} [[Rest (pet)|Rest]]{{·}} <s>[[Serpent's Swiftness (pet)|Serpent's Swiftness]]</s>{{·}} [[Spirit Beast Blessing]]{{·}} [[Still Water]]{{·}} [[Surface Trot]]{{·}} <s>[[Trample]]</s>{{·}} [[Trick]]
+
+|group6={{warlords-inline}}
+|list6=[[Agile Reflexes]]{{·}} [[Bark of the Wild]]{{·}} [[Blessing of Kongs]]{{·}} [[Bloody Screech]]{{·}} [[Breath of the Winds]]{{·}} [[Chitinous Armor]]{{·}} [[Deadly Sting]]{{·}} [[Defensive Quills]]{{·}} [[Double Bite]]{{·}} [[Duality]]{{·}} [[Dust of Life]]{{·}} [[Energizing Spores]]{{·}} [[Feast]]{{·}} [[Gift of Chi-Ji]]{{·}} [[Grace (pet ability)|Grace]]{{·}} [[Gruesome Bite]]{{·}} [[Harden Shell]]{{·}} [[Indomitable]]{{·}} [[Invigorating Roar]]{{·}} [[Keen Senses]]{{·}} [[Molten Hide]]{{·}} [[Plainswalking]]{{·}} [[Primal Agility]]{{·}} [[Reflective Armor Plating]]{{·}} [[Savage Vigor]]{{·}} [[Serpent's Cunning]]{{·}} [[Solid Shell]]{{·}} [[Sonic Focus]]{{·}} [[Speed of the Swarm]]{{·}} [[Spry Attacks]]{{·}} [[Stone Armor]]{{·}} [[Stone Scales]]{{·}} [[Strength of the Earth]]{{·}} [[Strength of the Pack]]{{·}} [[Sturdiness]]{{·}} [[Tenacity (pet ability)|Tenacity]]{{·}} [[Tendon Rip]]{{·}} [[Thick Hide (pet ability)|Thick Hide]]{{·}} [[Updraft]]{{·}} [[Warp Time]]{{·}} [[Web Spray]]{{·}} [[Wild Strength]]}}
+
+|group4=[[Pet specializations|Specialization]] abilities
+|list4={{navbox|child
+|group1=Cunning
+|list1=[[Boar's Speed]]{{·}} [[Bullheaded]]{{·}} [[Cornered]]{{·}} [[Dash (pet)|Dash]]{{·}} [[Roar of Sacrifice]]
+|group2=Ferocity
+|list2=[[Dash (pet)|Dash]]{{·}} [[Heart of the Phoenix]]{{·}} [[Rabid]]{{·}} [[Spiked Collar (pet)|Spiked Collar]]
+|group3=Tenacity
+|list3=[[Blood of the Rhino]]{{·}} [[Charge (pet)|Charge]]{{·}} [[Great Stamina]]{{·}} [[Last Stand (pet)|Last Stand]]{{·}} [[Thunderstomp (pet)|Thunderstomp]]}}
+
+|below=<s>[[Happiness]]</s>{{·}} [[Pet abilities]]{{·}} [[Pet specializations]]{{·}} <s>[[Pet talents]]</s>{{·}} [[Rare pet]]{{·}} <s>[[Training point]]</s>
+}}

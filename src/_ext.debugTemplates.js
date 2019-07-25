@@ -7,6 +7,11 @@
 
 // TODO: performance issue on highlight src code
 // TODO: refactor, config compiler
+// TODO: detect if an ext is installed
+// TODO: support different version of API
+// TODO: rename part in argument
+// TODO: ext, should include pre
+// TODO: link not supported
 
 const corsProxy = "https://gentle-taiga-41562.herokuapp.com/";
 function getUrl(url) {

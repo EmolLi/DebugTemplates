@@ -1,0 +1,68 @@
+Creates an expandable box div based box. See also: {{t|Collapsible}}, {{t|Navbox}}, and {{t|News blog item}}.
+;Usage
+:title= text for the title line. can be structured or another template.
+:content= text to fill the hide-able section.
+:state= 'hide', 'collapsed', 'coll' starts as hidden. 'none', 'plain', 'off' disables the collapsible part
+:style= style of the outer div, default is 100% width. 'width:100px' would force a small box.
+:tstyle= style of the title
+:cstyle=  style of the content
+:clear= adds a bottom separator line, optionally clearing wither side
+
+;Example
+<pre>
+{{Hidebox
+ |state = hide
+ |title = {{Spoiler}}
+ |content = <center>Some text and links to [[World of Warcraft]]</center>
+}}
+</pre>
+
+text before
+{{Hidebox
+|state = hide
+|title = {{Spoiler}}
+|content = <center>Some text and links to [[World of Warcraft]]</center>
+}}
+text after
+
+<pre>
+{{Hidebox
+ |state = hide
+ |style = width:100%
+ |title = <span style="float:left">9/22</span> [[World of Warcraft]]
+ |content = {{User_blog:Raylan13/News_Roundup_7/24}}
+ |tstyle = font-size:1.2em;font-weight:bold;text-align:center
+ |clear = both
+}}
+</pre>
+text before
+{{Hidebox
+|state = hide
+|style = width:100%
+|title = <span style="float:left">9/22</span> [[World of Warcraft]]
+|content = {{User_blog:Raylan13/News_Roundup_7/24}}
+|tstyle = font-size:1.2em;font-weight:bold
+|clear = both
+}}
+text after
+
+
+[[Category:Templates]]
+----
+;Template
+<onlyinclude><includeonly><!--
+
+  Note: Be careful, variables will be overwritten on subsequent re-entrant invokes on this template on the same page...
+
+-->{{#vardefine:tCOLL|{{#if:{{{title|}}}|{{#switch:{{{state|}}}|plain|none|off=|mw-collapsible}}}}}}<!--
+-->{{#vardefine:tCSTATE|{{#if:{{#var:tCOLL}}|{{#switch:{{{state|}}}|hide|coll|collapsed=mw-collapsed}}}}}}<!--
+
+--><div class="{{#var:tCOLL}} {{#var:tCSTATE}}" style="margin-top:-0.8em; padding:2px;{{{style|}}}"><!--
+  --><p style="text-align:center; {{{tstyle|}}}">
+{{{title|{{{1|}}}}}}
+</p><!--
+  --><div class="mw-collapsible-content" style="{{#if:{{#var:tCSTATE}}|display:none;}}{{{cstyle|}}}">
+{{{content|{{{2|}}}}}}</div><!--
+--></div><!--
+-->{{#if:{{{clear|}}}|<div style="width:100%;clear:{{{clear}}};border-bottom:1px dotted gray"></div>}}<!--
+--></includeonly></onlyinclude>

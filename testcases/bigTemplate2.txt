@@ -1,0 +1,31 @@
+<onlyinclude>{{Infobox
+|name         =
+|bodystyle    = padding: 0em; width: 23em;
+|title        =
+|titlestyle   =
+|above        = {{{name|{{PAGENAME}}}}}
+|abovestyle   = font-size: large;
+|image        = {{#if:{{{image|}}}|[[File:{{{image}}}|256px]]}}
+|imagestyle   =
+|caption      =
+|captionstyle =
+|headerstyle  = padding: 0em; height: 1.8em; font-weight: bold; text-align: center;
+|labelstyle   =
+|datastyle    =
+|tocright     = {{{tocright|0}}}
+
+|label1   = Duration
+|data1    = {{{duration|}}}
+|label2   = Currency
+|data2    = {{{currency|}}}
+|label3   = Boss
+|data3    = {{{boss|}}}
+|label4   = Highlights
+|data4    = {{{highlights|}}}
+
+|header5  = {{#if:{{{previous|{{{next|}}}}}}|Other events}}
+|data6    = {{#if:{{{previous|{{{next|}}}}}}|<table style="width: 100%;">
+<tr><td style="width:50%;">←&nbsp;Previous</td><td style="width:50%;">Next&nbsp;→</td></tr>
+<tr><td style="width:50%">{{{previous}}}</td><td style="width:50%">{{{next}}}</td></tr>
+</table>}}
+}}</onlyinclude>

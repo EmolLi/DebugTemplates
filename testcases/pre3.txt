@@ -1,0 +1,112 @@
+{{Infobox ability
+  | name = Mortal Strike
+|disambigpage=<includeonly>Template:Infobox ability</includeonly><noinclude>Template:Infobox ability/doc</noinclude>
+  | image = Ability Warrior SavageBlow.png
+  | description = A vicious strike that deals 185% weapon damage plus 1461 (+ 100% of SpellPower) and causes Mortal Wounds on the target.<br/>Generates 10 Rage.
+  | class = Warrior
+  | type = Offensive
+  | school = Physical
+  | cost = None
+  | range = 5 yd
+  | cast_time = Instant
+  | cooldown = 6 sec
+  | gcd = 1.5 sec
+  | talented = Yes
+  | specialization = Arms
+  | spec_specific = Yes
+  | level = 10
+  | improvement = {{ability|Wrecking Crew}}, {{loot|common|Glyph of Mortal Strike}}
+  | ranks = 1
+  | requirements = Requires Melee Weapon
+  | buff_name = Mortal Strike
+  | buff_image = Ability Warrior SavageBlow.png
+  | buff_desc = Healing effects reduced by 10%
+  | buff_dur = 10 seconds
+  | debuff=
+}}
+<pre>&lt;onlyinclude>{{Infobox ability
+| name            =
+| image           =
+| description     =
+| class           =
+| pet             =
+| race            =
+| type            =
+| school          =
+| cost            =
+| costunit        =
+| reagents        =
+| range           =
+| rangeunit       =
+| radius          =
+| cast_time       =
+| charges         =
+| cooldown        =
+| recharge        =
+| talented        =
+| specialization  =
+| spec_specific   =
+| level           =
+| improvement     =
+| ranks           =
+| requirements    =
+| buff_name       =
+| buff_type       =
+| buff_image      =
+| buff_desc       =
+| buff_dur        =
+| debuff          =
+| debuff_name     = ¯\ Optional if
+| debuff_type     =  | there is
+| debuff_image    =  | only one
+| debuff_desc     =  | buff/debuff
+| debuff_dur      = _/
+| item            =
+}}&lt;/onlyinclude></pre>
+
+;Parameters
+*<code>'''name''' = </code> Ability name.
+*<code>'''description''' = </code> Ability description as it appears in-game (replacing rank-modifiable values with "X").
+*<code>'''class''' = </code> If it is a class-specific ability, list any classes that can use this ability.
+**<code>'''pet''' = </code> ''optional'' If it is a pet-specific ability, list any pets that can use this ability.
+*<code>'''race''' = </code> If it is a race-specific ability, list any races that can use this ability.
+*<code>'''type''' = </code> "Offensive", "Defensive" or "Utility".
+*<code>'''school''' = </code> "Physical", "Arcane", "Frost", "Fire", "Nature", "Shadow" or "Holy".
+*<code>'''cost''' = </code> "x Mana/Rage/Energy" or x if used in conjunction with costunit.
+*<code>'''costunit''' = </code> Mana/Rage/Energy if cost is used without units.
+*<code>'''reagents''' = </code> Reagent(s) required to cast.
+*<code>'''range''' = </code> "x yd". If range = 0, or if Target = "Self", then disinclude; or x if used in conjunction with rangeunit.
+*<code>'''rangeunit''' = </code> yds/other units if range is used without units.
+*<code>'''radius''' = </code> ''optional'' For the use of ranged AoE spells.
+*<code>'''cast_time''' = </code> "x sec", "Instant" or "Next melee".
+*<code>'''charges''' = </code> #. Should have associated recharge time.
+*<code>'''cooldown''' = </code> "x sec/min/hrs".
+*<code>'''recharge''' = </code> "x sec/min/hrs". Should only be used if charges used.
+*<code>'''talented''' = </code> Is this ability a talent or gained from specialization?
+**''Deprecated'' Is the ability awarded by a spending points in a talent?
+*<code>'''specialization''' = </code> What specialization relates to ability (e.g. "Arms" for '''Mortal Strike'''). These are the abilities that theoretically benefit from [[mastery]].
+**<code>'''talent_tree''' = </code> ''Deprecated'' If Talented is "Yes", in what tree and tier can the talent be found (e.g. "Arms, Tier 7" for '''Mortal Strike''').
+*<code>'''spec_specific''' = </code> Is the ability awarded at a particular level by choosing a specialization (case-insensitive valid inputs: y, yes, true, n, no, or false)?
+**<code>'''talent_req''' = </code> ''Deprecated'' If Talented is "Yes", what is the talent required to activate it (if applicable and <code>spec_specific=</code>, not supplied).
+*<code>'''level''' = </code> Level the ability is acquired.
+**<code>'''guildlevel''' = </code> [[Guild level]] the ability is acquired (if <code>level=</code> not supplied).
+**<code>'''points_req''' = </code> ''Deprecated'' If Talented is "Yes", how many talent points are required to learn this ability (e.g., 30; if <code>level=</code> or <code>guildlevel=</code> not supplied).
+*<code>'''improvement''' = </code> If the ability can be improved by any talents, list all the talents separated by comma.
+*<code>'''ranks''' = </code> "x" (maximum rank number) or "N/A" if ability can't be upgraded to any rank / doesn't have a rank specified.
+*<code>'''requirements''' = </code> List any requirements that the player or the target has to meet in order to be able to use the ability (e.g.: "Requires melee weapon", "Requires Battle Stance", "Enemy must be below 20% HP", etc.).
+*<code>'''tcg''' = </code> ''Optional'' TCG image (<tt>File:</tt> not needed; i.e. <tt>Mind_Freeze_TCG.jpg</tt>).
+**<code>'''tcglink''' = </code> ''Optional'' Link for TCG image (i.e. http://www.wowtcgvault.com/ViewCard.aspx?CardName=Mind%20Freeze&Edition=DKS). Only applies if <code>tcg=</code> used.
+**<code>'''tcgwidth''' = </code> ''Optional'' Width for TCG image (default: 180px). Only applies if <code>tcg=</code> used.
+*<code>'''buff Name''' = </code> Name of a buff or debuff that is applied with this ability. Leave this blank if it's the same as the ability.
+*<code>'''buff_type''' = </code> magic, curse, poison, disease, or leave blank for typeless
+*<code>'''buff_image''' = </code> Icon image for the buff. Leave this blank if it's the same as the ability.
+*<code>'''buff_desc''' = </code> (optional) In-game text on the tooltip (leaving this blank disables this section)
+*<code>'''buff_dur''' = </code> Duration, including units. e.g. "10 seconds"
+*<code>'''debuff''' = </code> (optional) If the ability causes a buff, do not include this. if the ability causes a debuff, usage is <code>|debuff=</code> and nothing more.
+*<code>'''item''' = </code> (optional) Item produced, if a recipe. Use <code>&#123;&#123;:''item_name''&#125;&#125;</code> to show tooltip (if it exists) or just a link like <code>&#123;&#123;loot|''quality''|''item_name''&#125;&#125;</code>.
+
+;See also
+* For abilities of combat pets, use {{t|Infobox pet ability}}.
+* For talents that ''are not'' abilities (or recipes), use {{t|Infobox talent}}.
+
+<includeonly>[[Category:Infobox templates|Ability]][[ru:Шаблон:СпособностьКарточка]]</includeonly><noinclude>[[Category:Template documentation|{{PAGENAME}}]]</noinclude>

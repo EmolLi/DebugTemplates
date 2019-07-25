@@ -11,3 +11,8 @@
 {{Test{{Test1=b}}
 
 {{ {{ddd}}
+
+
+
+// demo
+{{Test|p1=12345|p2={{Test|p1=6789|p2=abcd}}}}
