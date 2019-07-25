@@ -862,7 +862,7 @@ function getAst(node, parent = null) {
     id: nindex++,
     parent
   };
-  node.childNodes.forEach(c => n.children.push(getAst(c, node)));
+  node.childNodes.forEach(c => n.children.push(getAst(c, n)));
   return n;
 }
 
@@ -1079,6 +1079,7 @@ function extractTemplatesAndParams(ast) {
     )
       templatesAndParams.push(curr);
     if (curr.value) {
+      console.log(curr.parent);
       if (curr.value == "=" && curr.parent && curr.parent.type == "part") {
         templatesAndParams.push({ ...curr, type: "assignmentSign" });
       } else {
