@@ -1,3 +1,6 @@
+// var in different templates
+
+
 {{#vardefine:iconwidth|25}}
 {{#vardefine:iconwidth2|25}}
 {{#vardefine:{{Test}}|25}}

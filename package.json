@@ -1,20 +1,30 @@
 {
+  "name": "DebuggerTemplate",
   "private": true,
   "scripts": {
     "test": "grunt test",
-    "babel": "babel --presets @babel/preset-react src/_ext.debugTemplates.js -o ext.debugTemplates.js"
+    "babel": "babel --presets @babel/preset-react src/_ext.debugTemplates.js -o ext.debugTemplates.js",
+    "dev": "webpack --mode development",
+    "prod": "webpack --mode production"
   },
   "devDependencies": {
     "@babel/core": "^7.4.5",
     "@babel/plugin-proposal-class-properties": "^7.5.5",
     "@babel/preset-react": "^7.0.0",
+    "babel-loader": "^8.0.6",
+    "babel-plugin-import": "^1.12.0",
     "babel-plugin-transform-react-jsx": "^6.24.1",
+    "css-loader": "^3.1.0",
     "grunt": "1.0.3",
     "grunt-babel": "^8.0.0",
     "grunt-banana-checker": "0.5.0",
-    "grunt-jsonlint": "1.1.0"
+    "grunt-jsonlint": "1.1.0",
+    "webpack": "^4.38.0",
+    "webpack-cli": "^3.3.6"
   },
   "dependencies": {
-    "antd": "^3.19.1"
+    "antd": "^3.20.7",
+    "react": "^16.8.6",
+    "react-dom": "^16.8.6"
   }
 }
