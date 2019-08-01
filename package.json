@@ -4,8 +4,9 @@
   "scripts": {
     "test": "grunt test",
     "babel": "babel --presets @babel/preset-react src/_ext.debugTemplates.js -o ext.debugTemplates.js",
-    "dev": "webpack --mode development",
-    "prod": "webpack --mode production"
+    "dev": "webpack --config-name app --mode development",
+    "prod": "webpack --config-name app --mode production",
+    "build-lib": "webpack --config-name lib"
   },
   "devDependencies": {
     "@babel/core": "^7.4.5",

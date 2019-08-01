@@ -27,7 +27,8 @@
   },
   "ResourceModules": {
     "ext.debugTemplates": {
-      "scripts": ["library/bundle.js", "dist/bundle.js"],
+      "scripts": ["dist/bundle.js"],
+      "_comment": "include librarby/lib.bundle.js instead of dynamically importing them for production code",
       "styles": ["antd.min.css", "ext.debugTemplates.css"],
       "messages": [
         "debugtemplates-error-parse",
