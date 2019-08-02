@@ -1,3 +1,24 @@
+import {
+  apiParse,
+  apiEval,
+  apiEvalAsync,
+  apiGetSource,
+  apiEvalHasResult,
+  apiEvalGetResult,
+  apiGetPage,
+  apiGetTemplateName
+} from "./services/api.js";
+
+import {
+  getXMLParser,
+  getAst,
+  mapAstToSrc,
+  extractTemplatesAndParams,
+  getExpectedPattern,
+  includesUnmatchedBracket,
+  parserExtensions
+} from "./services/parser.js";
+
 const { React, antd } = window;
 const {
   Row,
@@ -162,11 +183,14 @@ export class App extends React.Component {
     const { url, params } = this.state;
     try {
       let result = await apiEvalAsync(src, title, url, params);
+      debugger;
+      console.log(result, "1111111111");
       this.setState({
         errors: "",
         result: result
       });
     } catch (e) {
+      console.log(e, "2222222222");
       this.setState({ errors: e.message });
     }
   };
@@ -180,11 +204,9 @@ export class App extends React.Component {
           let ast = result.parse.parsetree["*"]
             ? getXMLParser()(result.parse.parsetree["*"])
             : null;
-          nindex = 0;
           let treeView = getAst(ast.children[0]);
           let unmatchedBracket = mapAstToSrc(treeView, src);
           await parserExtensions(treeView, src, extensions, url);
-          debugger;
           this.setState({ treeView: treeView, errors: "", unmatchedBracket });
           // updateFromXML(result.expandtemplates.parsetree, newparams);
         } else {
@@ -284,7 +306,7 @@ export class App extends React.Component {
       this.setState({ treeView: null, result: "", errors: "" });
     } else {
       this.setState({ editIntput: false });
-
+      debugger;
       this.evalResult();
       this.getParseTree();
     }
