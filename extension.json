@@ -29,7 +29,7 @@
     "ext.debugTemplates": {
       "scripts": ["dist/0.bundle.js", "dist/bundle.js"],
       "_comment": "include librarby/lib.bundle.js instead of dynamically importing them for production code",
-      "styles": ["library/antd.min.css", "ext.debugTemplates.css"],
+      "styles": ["library/antd.min.css", "src/ext.debugTemplates.css"],
       "messages": [
         "debugtemplates-error-parse",
         "debugtemplates-error-button",
