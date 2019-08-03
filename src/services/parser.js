@@ -46,7 +46,6 @@ export function getAst(node) {
 }
 
 export function mapAstToSrc(ast, src) {
-  debugger;
   let { templatesAndParams, unmatchedBracket } = extractTemplatesAndParams(ast);
   let stack_ast = [];
   let stack_src = [];
@@ -110,7 +109,6 @@ export function mapAstToSrc(ast, src) {
       ));
     }
 
-    debugger;
     // match ends
     matchEnd: while (src_i < src.length) {
       let c = src.charAt(src_i);
@@ -258,7 +256,6 @@ function extractTemplatesAndParams(ast) {
     )
       templatesAndParams.push(curr);
     if (curr.value) {
-      console.log(curr.parent);
       if (curr.value == "=" && curr.parent && curr.parent.type == "part") {
         templatesAndParams.push({ ...curr, type: "assignmentSign" });
       } else {

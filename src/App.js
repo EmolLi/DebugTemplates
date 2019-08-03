@@ -21,6 +21,8 @@ import {
 
 import { InputSection } from "./components/InputSection.js";
 import { ErrorSection } from "./components/ErrorSection.js";
+import { ResultPanel } from "./components/ResultPanel.js";
+import { TreeView } from "./components/TreeView.js";
 const { React, antd } = window;
 const {
   Row,
@@ -58,9 +60,6 @@ const paramsTableColumn = [
     key: "value"
   }
 ];
-const customPanelStyle = {
-  border: 0
-};
 
 export class App extends React.Component {
   state = {
@@ -86,45 +85,20 @@ export class App extends React.Component {
   };
 
   handler = newState => {
-    this.setState({
-      ...this.state,
-      ...newState
-    });
-  };
-
-  ResultPanel() {
-    const { result } = this.state;
-    return (
-      <Collapse
-        className="debugger-collapse-section"
-        expandIconPosition="right"
-        bordered={false}
-        defaultActiveKey={["1"]}
-      >
-        <Panel
-          header={
-            <Title level={4} type="secondary">
-              Result
-            </Title>
-          }
-          key="1"
-          style={customPanelStyle}
-        >
-          <div id="debugger-result-content">
-            <pre className="debugger-result-content-pre">
-              <code>{result}</code>
-            </pre>
-          </div>
-        </Panel>
-      </Collapse>
+    // console.log(newState, "aaa");
+    // console.log(this.state, newState, "kkk");
+    this.setState(
+      {
+        ...this.state,
+        ...newState
+      },
+      () => console.log(this.state, newState, "kkk")
     );
-  }
-
+  };
   evalResult = async (src = this.state.src, title = this.state.title) => {
     const { url, params } = this.state;
     try {
       let result = await apiEvalAsync(src, title, url, params);
-      debugger;
       console.log(result, "1111111111");
       this.setState({
         errors: "",
@@ -247,90 +221,10 @@ export class App extends React.Component {
       this.setState({ treeView: null, result: "", errors: "" });
     } else {
       this.setState({ editIntput: false });
-      debugger;
       this.evalResult();
       this.getParseTree();
     }
   };
-
-  treeNodeOnSelect = (selectedKeys, info) => {
-    // jump to template source
-    this.setState({ selectedNode: info.node.props.node });
-    let { start, end, type } = info.node.props.node;
-    if (start != undefined && end != undefined) {
-      this.setState({ inputHighlight: [start, end] });
-    }
-    if (type == "root") this.setState({ inputHighlight: null });
-    if (type == "template") {
-      this.setState({ stepIntoTemplateButtonDisabled: false });
-      // this.setState({title: node.})
-    } else {
-      this.setState({ stepIntoTemplateButtonDisabled: true });
-    }
-  };
-
-  generateTreeNode(node) {
-    const { type, value, id, children } = node;
-    // type = formatType(type);
-    // value = format(value)
-    return (
-      <TreeNode title={this.formatTreeNode(node)} key={node.id} node={node}>
-        {node.children.length > 0 &&
-          node.children.map(c => this.generateTreeNode(c))}
-      </TreeNode>
-    );
-  }
-
-  formatTreeNode(node) {
-    const { type, value, id, children } = node;
-    return (
-      <div>
-        {this.formatType(type)}
-        {this.formatValue(value)}
-        {this.formatEval(node._eval)}
-        {node._highlight ? <Tag color="green">⇦</Tag> : null}
-      </div>
-    );
-  }
-
-  formatType(type) {
-    if (!type) return null;
-    switch (type) {
-      case "part":
-        return "parameter";
-      case "tplarg":
-        return "argument";
-      case "ext":
-        return "nowiki";
-      default:
-        return type;
-    }
-  }
-  formatValue(value) {
-    if (!value) return null;
-    return <Tag>{value}</Tag>;
-  }
-  formatEval(_eval) {
-    if (!_eval) return null;
-    return <Tag color="blue">{_eval}</Tag>;
-  }
-  TreeView() {
-    const { treeView } = this.state;
-    return (
-      <div id="debugger-tree-view">
-        <Title level={4} type="secondary">
-          Tree View
-        </Title>
-        <div id="debugger-tree-view-content">
-          {treeView && (
-            <Tree onSelect={this.treeNodeOnSelect}>
-              {this.generateTreeNode(treeView)}
-            </Tree>
-          )}
-        </div>
-      </div>
-    );
-  }
 
   CallStackSection = () => {
     const { stepHistory } = this.state;
@@ -386,12 +280,15 @@ export class App extends React.Component {
       errors,
       stepHistory,
       stepIntoTemplateButtonDisabled,
+      selectedNode,
       params,
       editIntput,
       extensions,
       unmatchedBracket,
-      inputHighlight
+      inputHighlight,
+      treeView
     } = this.state;
+
     return (
       <Row>
         <Col span={12}>
@@ -430,8 +327,14 @@ export class App extends React.Component {
             {this.CallStackSection()}
             {this.ParamsTable()}
             <div>
-              {this.ResultPanel()}
-              {this.TreeView()}
+              <ResultPanel result={result} />
+              <TreeView
+                treeView={treeView}
+                selectedNode={selectedNode}
+                inputHighlight={inputHighlight}
+                stepIntoTemplateButtonDisabled={stepIntoTemplateButtonDisabled}
+                handler={this.handler}
+              />
             </div>
           </div>
         </Col>
