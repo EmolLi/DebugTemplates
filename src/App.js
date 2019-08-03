@@ -19,6 +19,7 @@ import {
   parserExtensions
 } from "./services/parser.js";
 
+import { InputSection } from "./components/InputSection.js";
 const { React, antd } = window;
 const {
   Row,
@@ -43,16 +44,6 @@ const { Panel } = Collapse;
 const NODE_TYPE = {
   template: "template"
 };
-const EXTENSIONS = {
-  parserFunctions: "parserFunctions",
-  variables: "variables",
-  stringFunctions: "stringFunctions"
-};
-const EXTENSIONS_FORMATTED = {
-  parserFunctions: "Parser Functions",
-  variables: "Variables",
-  stringFunctions: "String Functions"
-};
 
 const paramsTableColumn = [
   {
@@ -67,14 +58,7 @@ const paramsTableColumn = [
   }
 ];
 const customPanelStyle = {
-  // background: "#f7f7f7",
-  // borderRadius: 4,
-  // marginTop: 10,
-  // marginBottom: 10,
-  // paddingLeft: 0,
-  // paddingRight: 0,
   border: 0
-  // overflow: "hidden"
 };
 
 export class App extends React.Component {
@@ -100,56 +84,12 @@ export class App extends React.Component {
     }
   };
 
-  SettingPanel() {
-    const { url, homePageUrl, extensions } = this.state;
-    return (
-      <Collapse
-        className="debugger-collapse-section"
-        expandIconPosition="right"
-        bordered={false}
-        defaultActiveKey={["1"]}
-      >
-        <Panel
-          header={
-            <Title level={4} type="secondary">
-              Settings
-            </Title>
-          }
-          key="1"
-          style={customPanelStyle}
-        >
-          <Input
-            placeholder="API URL"
-            value={url}
-            onChange={e => this.setState({ url: e.target.value })}
-          />
-          <Input
-            placeholder="Home Page URL"
-            value={homePageUrl}
-            onChange={e => this.setState({ homePageUrl: e.target.value })}
-          />
-          <div id="supported-ext">
-            {Object.keys(EXTENSIONS).map(ext => (
-              <Checkbox
-                key={ext}
-                onChange={e =>
-                  this.setState({
-                    extensions: {
-                      ...extensions,
-                      [ext]: e.target.checked
-                    }
-                  })
-                }
-                checked={extensions[ext]}
-              >
-                {EXTENSIONS_FORMATTED[ext]}
-              </Checkbox>
-            ))}
-          </div>
-        </Panel>
-      </Collapse>
-    );
-  }
+  handler = newState => {
+    this.setState({
+      ...this.state,
+      ...newState
+    });
+  };
 
   ResultPanel() {
     const { result } = this.state;
@@ -417,56 +357,6 @@ export class App extends React.Component {
       </React.Fragment>
     );
   }
-  src;
-  InputSection() {
-    const {
-      src,
-      title,
-      result,
-      url,
-      homePageUrl,
-      errors,
-      stepIntoTemplateButtonDisabled,
-      editIntput
-    } = this.state;
-    return (
-      <div id="debugger-input" className="debugger-section">
-        <Title level={4}>Input</Title>
-        {this.SettingPanel()}
-        <div>
-          <Title className="debugger-title" level={4} type="secondary">
-            Source
-            <Button
-              onClick={() => this.setState({ editIntput: true })}
-              disabled={editIntput}
-              type="primary"
-              icon="edit"
-            />
-          </Title>
-          <Search
-            placeholder="Template Title"
-            value={title}
-            onChange={e => this.setState({ title: e.target.value })}
-            onSearch={this.getTemplateSource}
-            enterButton
-          />
-          {editIntput ? (
-            <TextArea
-              value={src}
-              id="debugger-input-textarea"
-              onChange={e =>
-                this.setState({ src: e.target.value, inputHighlight: null })
-              }
-            />
-          ) : (
-            <div id="debugger-input-textarea">
-              {this.inputTextWithHighlight()}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
 
   ErrorSection = () => {
     const { errors, unmatchedBracket } = this.state;
@@ -553,12 +443,26 @@ export class App extends React.Component {
       errors,
       stepHistory,
       stepIntoTemplateButtonDisabled,
-      params
+      params,
+      editIntput,
+      extensions
     } = this.state;
     return (
       <Row>
         <Col span={12}>
-          {this.InputSection()}
+          <InputSection
+            src={src}
+            title={title}
+            result={result}
+            url={url}
+            homePageUrl={homePageUrl}
+            errors={errors}
+            stepIntoTemplateButtonDisabled={stepIntoTemplateButtonDisabled}
+            editIntput={editIntput}
+            extensions={extensions}
+            handler={this.handler}
+            getTemplateSource={this.getTemplateSource}
+          />
           {this.ErrorSection()}
         </Col>
         <Col span={12}>
