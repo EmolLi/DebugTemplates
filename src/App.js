@@ -20,6 +20,7 @@ import {
 } from "./services/parser.js";
 
 import { InputSection } from "./components/InputSection.js";
+import { ErrorSection } from "./components/ErrorSection.js";
 const { React, antd } = window;
 const {
   Row,
@@ -331,64 +332,6 @@ export class App extends React.Component {
     );
   }
 
-  inputTextWithHighlight() {
-    const { src, inputHighlight } = this.state;
-    if (!inputHighlight)
-      return (
-        <pre className="debugger-input-textarea-pre">
-          <code>{src}</code>
-        </pre>
-      );
-    return (
-      <React.Fragment>
-        <pre className="debugger-input-textarea-pre">
-          {inputHighlight[0] > 0 && (
-            <code className="disabled">
-              {src.substring(0, inputHighlight[0])}
-            </code>
-          )}
-          <code>{src.substring(inputHighlight[0], inputHighlight[1] + 1)}</code>
-          {inputHighlight[1] < src.length - 1 && (
-            <code className="disabled">
-              {src.substring(inputHighlight[1] + 1)}
-            </code>
-          )}
-        </pre>
-      </React.Fragment>
-    );
-  }
-
-  ErrorSection = () => {
-    const { errors, unmatchedBracket } = this.state;
-    return (
-      <div id="debugger-errors" className="debugger-section">
-        <Title level={4}>Errors</Title>
-        <div id="debugger-errors-content">
-          {errors && (
-            <Text type="danger">
-              Error: {errors}
-              <br />
-            </Text>
-          )}
-          {unmatchedBracket &&
-            unmatchedBracket.length > 0 &&
-            unmatchedBracket.map((b, i) => (
-              <Text
-                type="warning"
-                key={i}
-                onClick={() =>
-                  this.setState({ inputHighlight: [b.start, b.start] })
-                }
-              >
-                Warning: unmacthed bracket {b.value}
-                <br />
-              </Text>
-            ))}
-        </div>
-      </div>
-    );
-  };
-
   CallStackSection = () => {
     const { stepHistory } = this.state;
     if (stepHistory.length <= 1) return null;
@@ -445,7 +388,9 @@ export class App extends React.Component {
       stepIntoTemplateButtonDisabled,
       params,
       editIntput,
-      extensions
+      extensions,
+      unmatchedBracket,
+      inputHighlight
     } = this.state;
     return (
       <Row>
@@ -461,9 +406,14 @@ export class App extends React.Component {
             editIntput={editIntput}
             extensions={extensions}
             handler={this.handler}
+            inputHighlight={inputHighlight}
             getTemplateSource={this.getTemplateSource}
           />
-          {this.ErrorSection()}
+          <ErrorSection
+            errors={errors}
+            unmatchedBracket={unmatchedBracket}
+            handler={this.handler}
+          />
         </Col>
         <Col span={12}>
           <div id="debugger-debugging-pane" className="debugger-section">

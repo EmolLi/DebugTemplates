@@ -14,8 +14,35 @@ export function InputSection({
   editIntput,
   extensions,
   getTemplateSource,
+  inputHighlight,
   handler
 }) {
+  function inputTextWithHighlight() {
+    if (!inputHighlight)
+      return (
+        <pre className="debugger-input-textarea-pre">
+          <code>{src}</code>
+        </pre>
+      );
+    return (
+      <React.Fragment>
+        <pre className="debugger-input-textarea-pre">
+          {inputHighlight[0] > 0 && (
+            <code className="disabled">
+              {src.substring(0, inputHighlight[0])}
+            </code>
+          )}
+          <code>{src.substring(inputHighlight[0], inputHighlight[1] + 1)}</code>
+          {inputHighlight[1] < src.length - 1 && (
+            <code className="disabled">
+              {src.substring(inputHighlight[1] + 1)}
+            </code>
+          )}
+        </pre>
+      </React.Fragment>
+    );
+  }
+
   return (
     <div id="debugger-input" className="debugger-section">
       <Title level={4}>Input</Title>
@@ -51,9 +78,7 @@ export function InputSection({
             }
           />
         ) : (
-          <div id="debugger-input-textarea">
-            {this.inputTextWithHighlight()}
-          </div>
+          <div id="debugger-input-textarea">{inputTextWithHighlight()}</div>
         )}
       </div>
     </div>
