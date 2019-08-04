@@ -1,21 +1,9 @@
-import {
-  apiParse,
-  apiEval,
-  apiEvalAsync,
-  apiGetSource,
-  apiEvalHasResult,
-  apiEvalGetResult,
-  apiGetPage,
-  apiGetTemplateName
-} from "./services/api.js";
+import { apiParse, apiEvalAsync, apiGetSource } from "./services/api.js";
 
 import {
   getXMLParser,
   getAst,
   mapAstToSrc,
-  extractTemplatesAndParams,
-  getExpectedPattern,
-  includesUnmatchedBracket,
   parserExtensions
 } from "./services/parser.js";
 
@@ -24,6 +12,8 @@ import { ErrorSection } from "./components/ErrorSection.js";
 import { ResultPanel } from "./components/ResultPanel.js";
 import { TreeView } from "./components/TreeView.js";
 import { CallStackSection } from "./components/CallStackSection.js";
+import { ParamsTable } from "./components/ParamsTable.js";
+
 const { React, antd } = window;
 const {
   Row,
@@ -43,24 +33,6 @@ const { TextArea, Search } = Input;
 const { Title, Paragraph, Text } = Typography;
 const { TreeNode } = Tree;
 const { Panel } = Collapse;
-
-// enums
-const NODE_TYPE = {
-  template: "template"
-};
-
-const paramsTableColumn = [
-  {
-    title: "Name",
-    dataIndex: "name",
-    key: "name"
-  },
-  {
-    title: "Value",
-    dataIndex: "value",
-    key: "value"
-  }
-];
 
 export class App extends React.Component {
   state = {
@@ -86,24 +58,21 @@ export class App extends React.Component {
   };
 
   handler = newState => {
-    // console.log(newState, "aaa");
-    // console.log(this.state, newState, "kkk");
     this.setState({
       ...this.state,
       ...newState
     });
   };
+
   evalResult = async (src = this.state.src, title = this.state.title) => {
     const { url, params } = this.state;
     try {
       let result = await apiEvalAsync(src, title, url, params);
-      console.log(result, "1111111111");
       this.setState({
         errors: "",
         result: result
       });
     } catch (e) {
-      console.log(e, "2222222222");
       this.setState({ errors: e.message });
     }
   };
@@ -121,21 +90,16 @@ export class App extends React.Component {
           let unmatchedBracket = mapAstToSrc(treeView, src);
           await parserExtensions(treeView, src, extensions, url);
           this.setState({ treeView: treeView, errors: "", unmatchedBracket });
-          // updateFromXML(result.expandtemplates.parsetree, newparams);
         } else {
-          // updateFromXML("");
           if (!result.error || result.error.code != "notext")
             this.setState({
               treeView: null,
               unmatchedBracket: [],
               errors: t
             });
-          // debugNote(mw.message("debugtemplates-error-parse") + " " + t);
         }
       } else {
         this.setState({ treeView: null, unmatchedBracket: [], errors: k });
-        // updateFromXML("");
-        // debugNote(mw.message("debugtemplates-error-parse") + " " + k);
       }
     });
   }
@@ -211,23 +175,6 @@ export class App extends React.Component {
     }
   };
 
-  ParamsTable = () => {
-    const { params } = this.state;
-    if (params.length == 0) return null;
-    return (
-      <div>
-        <Title level={4} type="secondary">
-          Parameters
-        </Title>
-        <Table
-          columns={paramsTableColumn}
-          dataSource={params}
-          size="small"
-          pagination={false}
-        />
-      </div>
-    );
-  };
   render() {
     const {
       src,
@@ -287,7 +234,7 @@ export class App extends React.Component {
               handler={this.handler}
               debug={this.debug}
             />
-            {this.ParamsTable()}
+            <ParamsTable params={params} />
             <div>
               <ResultPanel result={result} />
               <TreeView
