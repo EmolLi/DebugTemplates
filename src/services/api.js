@@ -52,7 +52,7 @@ export async function apiEvalAsync(src, title, url, params) {
   if (params && params.length > 0) {
     let p = {};
     params.forEach(k => (p[k.name] = k.value));
-    args = args + "&frame=" + encodeURIComponfent(JSON.stringify(p));
+    args = args + "&frame=" + encodeURIComponent(JSON.stringify(p));
   }
   let response = await fetch(getUrl(url), {
     method: "POST",

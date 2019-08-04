@@ -23,6 +23,7 @@ import { InputSection } from "./components/InputSection.js";
 import { ErrorSection } from "./components/ErrorSection.js";
 import { ResultPanel } from "./components/ResultPanel.js";
 import { TreeView } from "./components/TreeView.js";
+import { CallStackSection } from "./components/CallStackSection.js";
 const { React, antd } = window;
 const {
   Row,
@@ -87,13 +88,10 @@ export class App extends React.Component {
   handler = newState => {
     // console.log(newState, "aaa");
     // console.log(this.state, newState, "kkk");
-    this.setState(
-      {
-        ...this.state,
-        ...newState
-      },
-      () => console.log(this.state, newState, "kkk")
-    );
+    this.setState({
+      ...this.state,
+      ...newState
+    });
   };
   evalResult = async (src = this.state.src, title = this.state.title) => {
     const { url, params } = this.state;
@@ -203,19 +201,6 @@ export class App extends React.Component {
     }
   };
 
-  navigateInHistory = index => async () => {
-    let { stepHistory, src, url } = this.state;
-    if (!stepHistory[index].src) return;
-    this.setState(
-      {
-        src: stepHistory[index].src,
-        params: stepHistory[index].params,
-        stepHistory: stepHistory.splice(0, index + 1)
-      },
-      () => this.debug()
-    );
-  };
-
   debug = () => {
     if (!this.state.src) {
       this.setState({ treeView: null, result: "", errors: "" });
@@ -224,33 +209,6 @@ export class App extends React.Component {
       this.evalResult();
       this.getParseTree();
     }
-  };
-
-  CallStackSection = () => {
-    const { stepHistory } = this.state;
-    if (stepHistory.length <= 1) return null;
-    return (
-      <div id="debugger-call-stack">
-        <Title level={4} type="secondary">
-          Call Stack
-        </Title>
-        <div className="non-padding-section">
-          {stepHistory.map((h, i) => (
-            <React.Fragment key={i}>
-              {i > 0 && <Icon type="right" />}
-              <Button type="link" onClick={this.navigateInHistory(i)}>
-                {h.title}
-              </Button>
-            </React.Fragment>
-          ))}
-        </div>
-        {stepHistory.slice(0, stepHistory.length - 1).map((h, i) => (
-          <Typography>
-            <strong>{h.title}</strong>: {h.command}
-          </Typography>
-        ))}
-      </div>
-    );
   };
 
   ParamsTable = () => {
@@ -324,7 +282,11 @@ export class App extends React.Component {
               />
               <Button onClick={this.debug} type="primary" icon="caret-right" />
             </Title>
-            {this.CallStackSection()}
+            <CallStackSection
+              stepHistory={stepHistory}
+              handler={this.handler}
+              debug={this.debug}
+            />
             {this.ParamsTable()}
             <div>
               <ResultPanel result={result} />
