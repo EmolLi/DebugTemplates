@@ -50,10 +50,10 @@ function generateTreeNode(node) {
 }
 
 function formatTreeNode(node) {
-  const { type, value, id, children } = node;
+  const { value, id, children } = node;
   return (
     <div>
-      {formatType(type)}
+      {formatType(node)}
       {formatValue(value)}
       {formatEval(node._eval)}
       {node._highlight ? <Tag color="green">⇦</Tag> : null}
@@ -61,7 +61,8 @@ function formatTreeNode(node) {
   );
 }
 
-function formatType(type) {
+function formatType(node) {
+  let type = node.type;
   if (!type) return null;
   switch (type) {
     case "part":
@@ -69,7 +70,7 @@ function formatType(type) {
     case "tplarg":
       return "argument";
     case "ext":
-      return "nowiki";
+      return node._extType;
     default:
       return type;
   }

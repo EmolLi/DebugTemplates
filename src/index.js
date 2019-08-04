@@ -10,7 +10,6 @@
 // TODO: detect if an ext is installed
 // TODO: support different version of API
 // TODO: rename part in argument
-// TODO: ext, should include pre
 // TODO: link not supported
 import { dynamicallyLoadLibraries } from "./services/loadLibrary.js";
 let root = document.getElementById("debug-template-debugger");

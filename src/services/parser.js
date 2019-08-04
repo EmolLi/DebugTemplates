@@ -201,7 +201,8 @@ export function mapAstToSrc(ast, src) {
       } else if (
         c == "<" &&
         templatesAndParams[ast_i] &&
-        templatesAndParams[ast_i].type == "ext"
+        templatesAndParams[ast_i].type == "ext" &&
+        isExtBeginTag(src, src_i, templatesAndParams[ast_i])
       )
         break;
       else if (c == "{") break;
@@ -237,6 +238,19 @@ export function mapAstToSrc(ast, src) {
   return unmatchedBracket;
 }
 
+function isExtBeginTag(src, i, extNode) {
+  let { expectedEnd, expectedStart, expectedStartLen } = getExpectedPattern(
+    extNode
+  );
+  if (src.substr(i, expectedStartLen) != expectedStart) return false;
+  let j = i + expectedStartLen;
+  while (j < src.length && src.charAt(j) == " ") j++;
+  if (j == src.length) return false;
+  if (src.charAt(j) == ">") return true;
+  if (src.substr(j, 2) == "/>") return true;
+  return false;
+}
+
 function extractTemplatesAndParams(ast) {
   let templatesAndParams = [];
   let unmatchedBracket = [];
@@ -255,6 +269,9 @@ function extractTemplatesAndParams(ast) {
       curr.type == "ext"
     )
       templatesAndParams.push(curr);
+
+    if (curr.type == "ext") curr._extType = getExtType(curr);
+
     if (curr.value) {
       if (curr.value == "=" && curr.parent && curr.parent.type == "part") {
         templatesAndParams.push({ ...curr, type: "assignmentSign" });
@@ -272,6 +289,10 @@ function extractTemplatesAndParams(ast) {
     }
   }
   return { templatesAndParams, unmatchedBracket };
+}
+
+function getExtType(node) {
+  return node.children[0].children[0].value;
 }
 
 function getExpectedPattern(node) {
@@ -301,8 +322,8 @@ function getExpectedPattern(node) {
       expectedEnd = "";
       break;
     case "ext":
-      expectedStart = "<nowiki";
-      expectedEnd = "</nowiki";
+      expectedStart = "<" + node._extType;
+      expectedEnd = "</" + node._extType;
       break;
     default:
       break;

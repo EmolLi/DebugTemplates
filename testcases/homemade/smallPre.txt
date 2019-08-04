@@ -1,0 +1,9 @@
+<pre>
+{{Hidebox
+ |state = hide
+ |title = {{Spoiler}}
+ |content = <center>Some text and links to [[World of Warcraft]]</center>
+}}
+</pre>
+
+<nowiki>{{Test}}</nowiki>

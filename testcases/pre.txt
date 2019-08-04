@@ -1,3 +1,5 @@
+// passed
+
 Creates an expandable box div based box. See also: {{t|Collapsible}}, {{t|Navbox}}, and {{t|News blog item}}.
 ;Usage
 :title= text for the title line. can be structured or another template.
