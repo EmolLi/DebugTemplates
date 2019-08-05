@@ -1,3 +1,4 @@
+// passed
 <onlyinclude>{{Infobox
 |name         =
 |bodystyle    = padding: 0em; width: 23em;

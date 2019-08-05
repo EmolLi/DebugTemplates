@@ -96,6 +96,7 @@ export function mapAstToSrc(ast, src) {
     }
 
     if (!curr.type || expectedStartLen == 0) {
+      curr.end = src_i - 1;
       // unmatched bracket, empty name/ value in part
       stack_ast.splice(stack_ast.length - 1, 1); // pop
       if (stack_ast.length == 0) continue;
@@ -212,7 +213,7 @@ export function mapAstToSrc(ast, src) {
         ) {
           if (
             templatesAndParams[ast_i] &&
-            templatesAndParams[ast_i].type == null &&
+            !templatesAndParams[ast_i].type &&
             templatesAndParams[ast_i].value.charAt(0) == "}"
           )
             break;
@@ -230,7 +231,16 @@ export function mapAstToSrc(ast, src) {
         ({ expectedStart, expectedEnd, expectedStartLen } = getExpectedPattern(
           curr
         ));
-      } else src_i++;
+      } else {
+        if (templatesAndParams[ast_i] && !templatesAndParams[ast_i].type) {
+          let {
+            expectedEnd,
+            expectedStart,
+            expectedStartLen
+          } = getExpectedPattern(templatesAndParams[ast_i]);
+          if (src.substr(src_i, expectedStartLen) == expectedStart) break;
+        } else src_i++;
+      }
     }
   }
   console.log(templatesAndParams);
@@ -301,6 +311,7 @@ function getExpectedPattern(node) {
       expectedEnd = "}}}";
       break;
     case null:
+    case undefined:
       expectedStart = node.value;
       expectedEnd = "";
       break;

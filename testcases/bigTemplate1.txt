@@ -1,3 +1,4 @@
+// passed
 <noinclude>[[Category:Navigation templates|{{PAGENAME}}]]
 </noinclude>{{navbox with collapsible groups
 |name=Hunter pets
