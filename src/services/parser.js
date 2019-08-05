@@ -31,6 +31,7 @@ export function getAst(node) {
 
 export function mapAstToSrc(ast, src) {
   let { templatesAndParams } = extractTemplatesAndParams(ast);
+  let unmatchedBracket = [];
   let stack_ast = [];
   let stack_src = [];
   let ast_i = 0;
@@ -81,7 +82,8 @@ export function mapAstToSrc(ast, src) {
 
     if (!curr.type || expectedStartLen == 0) {
       curr.end = src_i - 1;
-      // unmatched bracket, empty name/ value in part
+      if (!curr.type) extractUnmatchedBrackets(curr, unmatchedBracket);
+      // string literals/ empty name/ value in part
       stack_ast.splice(stack_ast.length - 1, 1); // pop
       if (stack_ast.length == 0) continue;
       curr = stack_ast[stack_ast.length - 1];
@@ -227,7 +229,19 @@ export function mapAstToSrc(ast, src) {
       }
     }
   }
-  console.log(templatesAndParams);
+  console.log(templatesAndParams, unmatchedBracket);
+  return unmatchedBracket;
+}
+
+function extractUnmatchedBrackets(literalNode, unmatchedBracket) {
+  for (let i = 0; i < literalNode.value.length; i++) {
+    if (
+      literalNode.value.charAt(i) == "{" ||
+      literalNode.value.charAt(i) == "}"
+    )
+      unmatchedBracket.push(literalNode.start + i);
+    console.log(literalNode.start + i, "un");
+  }
 }
 
 function isExtBeginTag(src, i, extNode) {

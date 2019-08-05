@@ -43,6 +43,7 @@ export class App extends React.Component {
     selectedNode: null,
     editIntput: true,
     inputHighlight: null,
+    unmatchedBracket: [],
     stepHistory: [{ title: "Main", params: [] }],
     params: [],
     extensions: {
@@ -84,18 +85,19 @@ export class App extends React.Component {
             ? getXMLParser()(result.parse.parsetree["*"])
             : null;
           let treeView = getAst(ast.children[0]);
-          mapAstToSrc(treeView, src);
+          let unmatchedBracket = mapAstToSrc(treeView, src);
           await parserExtensions(treeView, src, extensions, url);
-          this.setState({ treeView: treeView, errors: "" });
+          this.setState({ treeView: treeView, errors: "", unmatchedBracket });
         } else {
           if (!result.error || result.error.code != "notext")
             this.setState({
               treeView: null,
+              unmatchedBracket: [],
               errors: t
             });
         }
       } else {
-        this.setState({ treeView: null, errors: k });
+        this.setState({ treeView: null, unmatchedBracket: [], errors: k });
       }
     });
   }
@@ -185,6 +187,7 @@ export class App extends React.Component {
       params,
       editIntput,
       extensions,
+      unmatchedBracket,
       inputHighlight,
       treeView
     } = this.state;
@@ -206,7 +209,11 @@ export class App extends React.Component {
             inputHighlight={inputHighlight}
             getTemplateSource={this.getTemplateSource}
           />
-          <ErrorSection errors={errors} handler={this.handler} />
+          <ErrorSection
+            errors={errors}
+            unmatchedBracket={unmatchedBracket}
+            handler={this.handler}
+          />
         </Col>
         <Col span={12}>
           <div id="debugger-debugging-pane" className="debugger-section">
