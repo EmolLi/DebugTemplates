@@ -9,7 +9,7 @@ import {
   apiGetTemplateName
 } from "./api.js";
 
-// For indexing the displayed HTML nodes with unique numbers used in highlighting.
+let _variables;
 
 //===============================PARSING==========================
 //================================================================
@@ -46,7 +46,7 @@ export function getAst(node) {
 }
 
 export function mapAstToSrc(ast, src) {
-  let { templatesAndParams, unmatchedBracket } = extractTemplatesAndParams(ast);
+  let { templatesAndParams } = extractTemplatesAndParams(ast);
   let stack_ast = [];
   let stack_src = [];
   let ast_i = 0;
@@ -95,11 +95,7 @@ export function mapAstToSrc(ast, src) {
       src_i++;
     }
 
-    if (
-      curr.type == "unmatchedBracket" ||
-      curr.type == "assignmentSign" ||
-      expectedStartLen == 0
-    ) {
+    if (!curr.type || expectedStartLen == 0) {
       // unmatched bracket, empty name/ value in part
       stack_ast.splice(stack_ast.length - 1, 1); // pop
       if (stack_ast.length == 0) continue;
@@ -138,6 +134,8 @@ export function mapAstToSrc(ast, src) {
       }
 
       if (curr.type == "part" || curr.type == "value") {
+        // if (ast_i == 49) debugger;
+        // if (curr.id == 56) debugger;
         // part unfinished
         if (
           curr.type == "part" &&
@@ -214,7 +212,8 @@ export function mapAstToSrc(ast, src) {
         ) {
           if (
             templatesAndParams[ast_i] &&
-            templatesAndParams[ast_i].type == "unmatchedBracket"
+            templatesAndParams[ast_i].type == null &&
+            templatesAndParams[ast_i].value.charAt(0) == "}"
           )
             break;
         }
@@ -235,7 +234,6 @@ export function mapAstToSrc(ast, src) {
     }
   }
   console.log(templatesAndParams);
-  return unmatchedBracket;
 }
 
 function isExtBeginTag(src, i, extNode) {
@@ -253,7 +251,6 @@ function isExtBeginTag(src, i, extNode) {
 
 function extractTemplatesAndParams(ast) {
   let templatesAndParams = [];
-  let unmatchedBracket = [];
 
   let stack_tree_explore = [];
   stack_tree_explore.push(ast);
@@ -272,27 +269,21 @@ function extractTemplatesAndParams(ast) {
 
     if (curr.type == "ext") curr._extType = getExtType(curr);
 
-    if (curr.value) {
-      if (curr.value == "=" && curr.parent && curr.parent.type == "part") {
-        templatesAndParams.push({ ...curr, type: "assignmentSign" });
-      } else {
-        let unmacthed = includesUnmatchedBracket(curr.value);
-        if (unmacthed) {
-          unmatchedBracket = [...unmatchedBracket, ...unmacthed];
-          templatesAndParams = [...templatesAndParams, ...unmacthed];
-        }
-      }
+    if (!curr.type && curr.value) {
+      templatesAndParams.push(curr);
     }
+
     if (!curr.children || curr.type == "ext") continue;
     for (let j = curr.children.length - 1; j >= 0; j--) {
       stack_tree_explore.push(curr.children[j]);
     }
   }
-  return { templatesAndParams, unmatchedBracket };
+  return { templatesAndParams };
 }
 
 function getExtType(node) {
-  return node.children[0].children[0].value;
+  let extType = node.children[0].children[0].value;
+  return extType;
 }
 
 function getExpectedPattern(node) {
@@ -309,12 +300,8 @@ function getExpectedPattern(node) {
       expectedStart = "{{{";
       expectedEnd = "}}}";
       break;
-    case "unmatchedBracket":
+    case null:
       expectedStart = node.value;
-      expectedEnd = "";
-      break;
-    case "assignmentSign":
-      expectedStart = "=";
       expectedEnd = "";
       break;
     case "part":
@@ -326,7 +313,6 @@ function getExpectedPattern(node) {
       expectedEnd = "</" + node._extType;
       break;
     default:
-      break;
   }
 
   expectedStartLen = expectedStart.length;
@@ -338,18 +324,6 @@ function getExpectedPattern(node) {
   }
   return { expectedEnd, expectedStart, expectedStartLen };
 }
-
-function includesUnmatchedBracket(str) {
-  let unmatched = [];
-  for (let i = 0; i < str.length; i++) {
-    let c = str.charAt(i);
-    if (c == "{" || c == "}")
-      unmatched.push({ type: "unmatchedBracket", value: c });
-  }
-  if (unmatched.length > 0) return unmatched;
-}
-
-let _variables;
 
 export async function parserExtensions(
   ast,
@@ -599,8 +573,8 @@ async function parserExtInTemplateSyntax(ast, src, url, warnings, ext) {
     }
   }
   await Promise.all(
-    ast.children.map(async c => {
-      await parserExtInTemplateSyntax(c, src, url, warnings, ext);
+    ast.children.map(async child => {
+      await parserExtInTemplateSyntax(child, src, url, warnings, ext);
     })
   );
 }

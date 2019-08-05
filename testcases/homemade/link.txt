@@ -2,3 +2,13 @@
 [[Template:Test]]
 {{Test[}}https://wowwiki.fandom.com/wiki/Special:AllPages?namespace=10&from=Guildbox%2FDev&to=Infobox_game{{dsfs]Test}}
 [https://wowwiki.fandom.com/wiki/Special:AllPages?namespace=10&from=Guildbox%2FDev&to=Infobox_game{{dsfs]Test}}
+
+[[Test]]
+
+{{[[}}Test]]
+
+{{Test[[a|a]]}}
+
+{{Test}}
+
+{{Test[[aa}}]]

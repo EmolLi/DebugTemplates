@@ -29,3 +29,9 @@
 <tr><td style="width:50%">{{{previous}}}</td><td style="width:50%">{{{next}}}</td></tr>
 </table>}}
 }}</onlyinclude>
+
+
+
+{{Infobox
+|image        = {{#if:{{{image|}}}|[[File:{{{image}}}|256px]]}}
+|imagestyle   =}}

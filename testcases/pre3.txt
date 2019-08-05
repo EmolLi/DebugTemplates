@@ -1,3 +1,4 @@
+// passed
 {{Infobox ability
   | name = Mortal Strike
 |disambigpage=<includeonly>Template:Infobox ability</includeonly><noinclude>Template:Infobox ability/doc</noinclude>
