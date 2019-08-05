@@ -1,11 +1,7 @@
 import { apiParse, apiEvalAsync, apiGetSource } from "./services/api.js";
 
-import {
-  getXMLParser,
-  getAst,
-  mapAstToSrc,
-  parserExtensions
-} from "./services/parser.js";
+import { getXMLParser, getAst, mapAstToSrc } from "./services/parser.js";
+import { parserExtensions } from "./services/parserExtensions.js";
 
 import { InputSection } from "./components/InputSection.js";
 import { ErrorSection } from "./components/ErrorSection.js";
