@@ -9,6 +9,7 @@ import { ResultPanel } from "./components/ResultPanel.js";
 import { TreeView } from "./components/TreeView.js";
 import { CallStackSection } from "./components/CallStackSection.js";
 import { ParamsTable } from "./components/ParamsTable.js";
+import { OptimizerPane } from "./components/OptimizerPane.js";
 
 const { React, antd } = window;
 const {
@@ -244,6 +245,7 @@ export class App extends React.Component {
               />
             </div>
           </div>
+          <OptimizerPane />
         </Col>
       </Row>
     );
