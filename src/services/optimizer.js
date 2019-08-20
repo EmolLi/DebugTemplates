@@ -1,13 +1,15 @@
 // =============================================
 // code clone detection: suffix tree
 // =============================================
-export function detectCodeClone(src, threshold) {
+export function detectCodeClone(src, threshold = 15) {
   const root = { val: "", len: 0, indexes: [], children: new Array(128) }; // 128 ascii characters
+  const clones = {};
   for (let i = 0; i < src.length; i++) {
     let s = src.substr(i);
     addSuffixToTree(s, i);
   }
   console.log(root);
+  console.log(clones);
   // char: string, character
   // i: number, index
   function addSuffixToTree(s, i, rootNode = root) {
@@ -52,7 +54,16 @@ export function detectCodeClone(src, threshold) {
 
           console.log(s.substring(0, k + j));
 
+          if (next.len >= threshold) {
+            let key = next.indexes[0] + "-" + next.len;
+            clones[key] = {
+              len: next.len,
+              indexes: [...next.indexes]
+            };
+          }
+
           if (k + j == s.length) return;
+
           if (next.val.charAt(k) != s.charAt(k + j)) {
             // at least one character will be matched (to have next)
             // node needed to be splited

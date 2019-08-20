@@ -206,8 +206,11 @@ export function mapAstToSrc(ast, src) {
         }
         curr.end = src_i + expectedStartLen - 1;
         // title
-        if (curr.type == "template" && !curr.children[0].start) {
-          curr.children[0].start = curr.start + 2;
+        if (
+          (curr.type == "template" || curr.type == "tplarg") &&
+          !curr.children[0].start
+        ) {
+          curr.children[0].start = curr.start + expectedStartLen;
           curr.children[0].end = src_i - 1;
         }
         src_i += expectedStartLen;
@@ -240,7 +243,6 @@ function extractUnmatchedBrackets(literalNode, unmatchedBracket) {
       literalNode.value.charAt(i) == "}"
     )
       unmatchedBracket.push(literalNode.start + i);
-    console.log(literalNode.start + i, "un");
   }
 }
 
