@@ -38,8 +38,8 @@ export class App extends React.Component {
     result: "",
     errors: "",
     title: "",
-    url: "http://localhost/mediawiki-1.32.1/api.php",
-    homePageUrl: "http://localhost/mediawiki-1.32.1/index.php",
+    url: "http://www.ewiki.club/api.php",
+    homePageUrl: "http://www.ewiki.club//index.php",
     stepIntoTemplateButtonDisabled: true,
     selectedNode: null,
     editIntput: true,
@@ -54,13 +54,22 @@ export class App extends React.Component {
     }
   };
 
-  handler = newState => {
+  handler = (newState, callback = null) => {
     // console.log(newState, "aaa");
     // console.log(this.state, newState, "kkk");
-    this.setState({
-      ...this.state,
-      ...newState
-    });
+    if (!callback)
+      this.setState({
+        ...this.state,
+        ...newState
+      });
+    else
+      this.setState(
+        {
+          ...this.state,
+          ...newState
+        },
+        callback
+      );
   };
 
   evalResult = async (src = this.state.src, title = this.state.title) => {

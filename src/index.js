@@ -6,7 +6,6 @@
  **/
 
 // TODO: performance issue on highlight src code
-// TODO: refactor, config compiler
 // TODO: detect if an ext is installed
 // TODO: support different version of API
 // TODO: link not supported

@@ -1,6 +1,6 @@
-const corsProxy = "https://gentle-taiga-41562.herokuapp.com/";
+const corsProxy = "https://powerful-citadel-32622.herokuapp.com/";
 function getUrl(url) {
-  if (new URL(url).hostname != "localhost") {
+  if (new URL(url).hostname != window.location.hostname) {
     // cors
     return corsProxy + url;
   }
@@ -63,7 +63,7 @@ export async function apiEvalAsync(src, title, url, params) {
     body: args
   });
   let result = await response.json();
-  if (!response.ok) throw new Error(response.status + content);
+  if (!response.ok) throw new Error(response.status);
   return result.expandframe.result;
 }
 
@@ -71,7 +71,7 @@ export async function apiGetSource(title, homePageUrl) {
   let response = await fetch(
     getUrl(`${homePageUrl}/Template:${title}?action=raw`)
   );
-  content = await response.text();
+  let content = await response.text();
   if (!response.ok) {
     if (response.status == 404) throw new Error(`Template ${title} not found.`);
     throw new Error(response.status + content);

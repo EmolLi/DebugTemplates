@@ -42,6 +42,8 @@ export function TreeView({
 
 function generateTreeNode(node) {
   const { type, value, id, children } = node;
+  if (node.start == undefined || node.end == undefined) {
+  }
   return (
     <TreeNode title={formatTreeNode(node)} key={node.id} node={node}>
       {node.children.length > 0 && node.children.map(c => generateTreeNode(c))}
