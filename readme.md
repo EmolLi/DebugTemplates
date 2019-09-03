@@ -8,7 +8,7 @@ Debugger Features:
 - Template step in/ step out. (Only supports templates in the same wiki for now.)
 - Supports extension: Variables, ParserFunctions, StringFunctions.
 
-  ![Demo](../doc/demo.gif)
+  ![Demo](./doc/demo.gif)
 
 [Demo Link](http://www.ewiki.club/index.php?title=Special:DebugTemplates)
 
