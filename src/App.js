@@ -38,8 +38,8 @@ export class App extends React.Component {
     result: "",
     errors: "",
     title: "",
-    url: "http://www.ewiki.club/api.php",
-    homePageUrl: "http://www.ewiki.club//index.php",
+    url: "http://localhost/mediawiki-1.32.1/api.php", //"http://www.ewiki.club/api.php",
+    homePageUrl: "http://localhost/mediawiki-1.32.1/index.php", //"http://www.ewiki.club//index.php",
     stepIntoTemplateButtonDisabled: true,
     selectedNode: null,
     editIntput: true,
@@ -254,7 +254,7 @@ export class App extends React.Component {
               />
             </div>
           </div>
-          <OptimizerPane />
+          <OptimizerPane ast={treeView} />
         </Col>
       </Row>
     );
