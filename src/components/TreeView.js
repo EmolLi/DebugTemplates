@@ -1,6 +1,10 @@
-const { Typography, Tree, Tag } = antd;
+const { Collapse, Typography, Tree, Tag } = antd;
 const { Title } = Typography;
 const { TreeNode } = Tree;
+const { Panel } = Collapse;
+const customPanelStyle = {
+  border: 0
+};
 
 export function TreeView({
   treeView,
@@ -27,16 +31,30 @@ export function TreeView({
   };
 
   return (
-    <div id="debugger-tree-view">
-      <Title level={4} type="secondary">
-        Tree View
-      </Title>
-      <div id="debugger-tree-view-content">
-        {treeView && (
-          <Tree onSelect={treeNodeOnSelect}>{generateTreeNode(treeView)}</Tree>
-        )}
-      </div>
-    </div>
+    <Collapse
+      className="debugger-collapse-section"
+      expandIconPosition="right"
+      bordered={false}
+      defaultActiveKey={["1"]}
+    >
+      <Panel
+        header={
+          <Title level={4} type="secondary">
+            Tree View
+          </Title>
+        }
+        key="1"
+        style={customPanelStyle}
+      >
+        <div id="debugger-tree-view-content">
+          {treeView && (
+            <Tree onSelect={treeNodeOnSelect}>
+              {generateTreeNode(treeView)}
+            </Tree>
+          )}
+        </div>
+      </Panel>
+    </Collapse>
   );
 }
 

@@ -80,7 +80,7 @@ pre code.disabled {
 }
 
 #debugger-debugging-pane {
-  min-height: 600px;
+  /* min-height: 600px; */
 }
 
 #debugger-tree-view {
@@ -90,6 +90,7 @@ pre code.disabled {
 #debugger-tree-view-content {
   height: 350px;
   overflow: scroll;
+  background: aliceblue;
 }
 
 #debugger-result {
