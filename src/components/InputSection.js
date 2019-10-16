@@ -18,29 +18,49 @@ export function InputSection({
   handler
 }) {
   function inputTextWithHighlight() {
-    if (!inputHighlight)
+    if (
+      !inputHighlight ||
+      inputHighlight.length == 0 ||
+      inputHighlight.length % 2 != 0
+    )
       return (
         <pre className="debugger-input-textarea-pre">
           <code>{src}</code>
         </pre>
       );
-    return (
-      <React.Fragment>
-        <pre className="debugger-input-textarea-pre">
-          {inputHighlight[0] > 0 && (
-            <code className="disabled">
-              {src.substring(0, inputHighlight[0])}
-            </code>
-          )}
-          <code>{src.substring(inputHighlight[0], inputHighlight[1] + 1)}</code>
-          {inputHighlight[1] < src.length - 1 && (
-            <code className="disabled">
-              {src.substring(inputHighlight[1] + 1)}
-            </code>
-          )}
-        </pre>
-      </React.Fragment>
+    return highlightSrc();
+  }
+
+  function highlightSrc() {
+    let start = 0;
+    let highlightStartIndex = 0;
+    let highlightEndIndex = 1;
+
+    let formattedSrc = [];
+    while (highlightEndIndex < inputHighlight.length) {
+      formattedSrc.push(
+        <React.Fragment key={start}>
+          <code className="disabled">
+            {src.substring(start, inputHighlight[highlightStartIndex])}
+          </code>
+          <code>
+            {src.substring(
+              inputHighlight[highlightStartIndex],
+              inputHighlight[highlightEndIndex] + 1
+            )}
+          </code>
+        </React.Fragment>
+      );
+      start = inputHighlight[highlightEndIndex] + 1;
+      highlightStartIndex += 2;
+      highlightEndIndex += 2;
+    }
+    formattedSrc.push(
+      <code className="disabled" key={start}>
+        {src.substring(start)}
+      </code>
     );
+    return <pre className="debugger-input-textarea-pre">{formattedSrc}</pre>;
   }
 
   return (

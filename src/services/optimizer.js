@@ -102,7 +102,7 @@ export function detectCodeClone(ast, threshold = 10) {
   }
   console.log(root);
   console.log(clones, 111);
-  processPossibleClones(clones);
+  return processPossibleClones(clones);
 
   // 1. map str clones to nodes
   // 2. make sure each clone is valid
@@ -114,7 +114,13 @@ export function detectCodeClone(ast, threshold = 10) {
   ) {
     let validClones = [];
     for (let c of Object.values(clones)) {
-      let vc = { nodeIndexes: [], nodeLen: -1 };
+      debugger;
+      let vc = {
+        nodeIndexes: [],
+        nodeLen: -1,
+        srcLen: -1,
+        toOptimize: true
+      };
       let len = c.len;
       for (let start of c.indexes) {
         if (!nodeStrMap.has(start) || !nodeStrMap.has(start + len)) continue;
@@ -135,13 +141,14 @@ export function detectCodeClone(ast, threshold = 10) {
             break;
           }
         }
-        for (let i = endNodeIndex; i > startNodeIndex; i--) {
+        for (let i = startNodeIndex; i < endNodeIndex; i++) {
           if (nodeSeq[i].end || nodeSeq[i].end == 0) {
             srcEnd = nodeSeq[i].end;
             break;
           }
         }
         if (srcEnd - srcStart < srcLenThreshold) continue;
+        vc.srcLen = srcEnd - srcStart + 1;
 
         // check if valid statement
         // matching begin tokens and end tokens
@@ -158,7 +165,13 @@ export function detectCodeClone(ast, threshold = 10) {
           vc.nodeIndexes[vc.nodeIndexes.length - 1] + length > startNodeIndex
         )
           continue;
-        vc.nodeIndexes.push(startNodeIndex);
+        vc.nodeIndexes.push({
+          startNodeIndex,
+          endNodeIndex,
+          srcStart,
+          srcEnd,
+          toOptimize: true
+        });
       }
       if (vc.nodeIndexes.length > 1) validClones.push(vc);
     }

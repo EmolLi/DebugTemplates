@@ -96,3 +96,9 @@ pre code.disabled {
 #debugger-result {
   min-height: 200px;
 }
+
+#debugger-opt-clone {
+  height: 150px;
+  overflow: scroll;
+  background: aliceblue;
+}

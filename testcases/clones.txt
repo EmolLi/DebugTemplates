@@ -1,0 +1,5 @@
+{{#ifexpr: | yes | no}}aaa{{Test|p1=111}}aaa{{#ifexpr: | yes | no}}aaa{{Test|p1=111}}aaa
+
+{{#ifexpr: | yes | no}}{{#ifexpr: | yes | no}}
+{{#ifexpr: | yesss | no00}}{{#ifexpr: | yesss | no00}}
+{{#ifexpr: | yesss | no11}}{{#ifexpr: | yesss | no11}}

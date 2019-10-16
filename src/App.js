@@ -31,6 +31,16 @@ const { Title, Paragraph, Text } = Typography;
 const { TreeNode } = Tree;
 const { Panel } = Collapse;
 
+const cleanState = {
+  treeView: null,
+  result: "",
+  errors: "",
+  selectedNode: null,
+  inputHighlight: null,
+  unmatchedBracket: [],
+  clones: [],
+  selectedClone: -1
+};
 export class App extends React.Component {
   state = {
     src: "{{#ifexpr: | yes | no}}",
@@ -51,25 +61,15 @@ export class App extends React.Component {
       parserFunctions: true,
       variables: true,
       stringFunctions: true
-    }
+    },
+    clones: [], // Optimizer
+    selectedClone: -1
   };
 
   handler = (newState, callback = null) => {
-    // console.log(newState, "aaa");
-    // console.log(this.state, newState, "kkk");
-    if (!callback)
-      this.setState({
-        ...this.state,
-        ...newState
-      });
-    else
-      this.setState(
-        {
-          ...this.state,
-          ...newState
-        },
-        callback
-      );
+    let state = { ...this.state, ...newState };
+    if (!callback) this.setState(state);
+    else this.setState(state, callback);
   };
 
   evalResult = async (src = this.state.src, title = this.state.title) => {
@@ -174,8 +174,9 @@ export class App extends React.Component {
   };
 
   debug = () => {
+    this.setState(cleanState);
     if (!this.state.src) {
-      this.setState({ treeView: null, result: "", errors: "" });
+      // this.setState({ treeView: null, result: "", errors: "" });
     } else {
       this.setState({ editIntput: false });
       this.evalResult();
@@ -199,7 +200,9 @@ export class App extends React.Component {
       extensions,
       unmatchedBracket,
       inputHighlight,
-      treeView
+      treeView,
+      clones,
+      selectedClone
     } = this.state;
 
     return (
@@ -254,7 +257,12 @@ export class App extends React.Component {
               />
             </div>
           </div>
-          <OptimizerPane ast={treeView} />
+          <OptimizerPane
+            ast={treeView}
+            clones={clones}
+            selectedClone={selectedClone}
+            handler={this.handler}
+          />
         </Col>
       </Row>
     );
