@@ -3,3 +3,10 @@
 {{#ifexpr: | yes | no}}{{#ifexpr: | yes | no}}
 {{#ifexpr: | yesss | no00}}{{#ifexpr: | yesss | no00}}
 {{#ifexpr: | yesss | no11}}{{#ifexpr: | yesss | no11}}
+
+
+{{Test|p1=111|p2=333}}aaa{{Test|p1={{Test|p1=111|p2=333}}|p2=333}}aaa{{Test|p1=111|p2=333}}aaa
+
+
+// do not always choose the longest clone
+randomText{{Test|p1=111|p2=333}}This is a long clone{{SmallTemplate}}randomText123{{Test|p1=111|p2=333}}{{Test|p1=111|p2=333}}This is a long clone{{SmallTemplate}}

@@ -1,9 +1,16 @@
 const { Typography, Button } = antd;
 const { Title } = Typography;
-import { detectCodeClone } from "../services/optimizer";
+import { detectCodeClone, elimilateClones } from "../services/optimizer";
 import { ClonePanel } from "./ClonePanel";
 
-export function OptimizerPane({ clones, selectedClone, ast, handler }) {
+export function OptimizerPane({
+  clones,
+  selectedClone,
+  ast,
+  handler,
+  src,
+  selectedClonesToOptimize
+}) {
   return (
     <div id="optimizer-pane" className="debugger-section">
       <Title className="debugger-section-title debugger-title" level={4}>
@@ -14,7 +21,25 @@ export function OptimizerPane({ clones, selectedClone, ast, handler }) {
             if (!ast) return;
             let clones = detectCodeClone(ast);
             console.log(clones, "ccc");
-            handler({ clones });
+            let selectedClonesToOpt = [];
+            clones.forEach((c, i) => {
+              if (c.toOptimize) selectedClonesToOpt.push(i);
+            });
+            handler({ clones, selectedClonesToOptimize: selectedClonesToOpt });
+          }}
+          type="primary"
+          icon="caret-right"
+        />
+        <Button
+          onClick={() => {
+            console.log("generate");
+            if (!clones) return;
+            let optCode = elimilateClones(
+              clones,
+              src,
+              selectedClonesToOptimize
+            );
+            console.log(optCode);
           }}
           type="primary"
           icon="caret-right"
@@ -25,6 +50,7 @@ export function OptimizerPane({ clones, selectedClone, ast, handler }) {
           clones={clones}
           handler={handler}
           selectedClone={selectedClone}
+          selectedClonesToOptimize={selectedClonesToOptimize}
         />
       </div>
     </div>

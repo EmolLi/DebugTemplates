@@ -63,7 +63,8 @@ export class App extends React.Component {
       stringFunctions: true
     },
     clones: [], // Optimizer
-    selectedClone: -1
+    selectedClone: -1,
+    selectedClonesToOptimize: []
   };
 
   handler = (newState, callback = null) => {
@@ -202,7 +203,8 @@ export class App extends React.Component {
       inputHighlight,
       treeView,
       clones,
-      selectedClone
+      selectedClone,
+      selectedClonesToOptimize
     } = this.state;
 
     return (
@@ -262,6 +264,8 @@ export class App extends React.Component {
             clones={clones}
             selectedClone={selectedClone}
             handler={this.handler}
+            src={src}
+            selectedClonesToOptimize={selectedClonesToOptimize}
           />
         </Col>
       </Row>

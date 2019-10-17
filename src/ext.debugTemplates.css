@@ -98,7 +98,7 @@ pre code.disabled {
 }
 
 #debugger-opt-clone {
-  height: 150px;
-  overflow: scroll;
-  background: aliceblue;
+  height: 300px;
+  /* overflow: scroll; */
+  /* background: aliceblue; */
 }

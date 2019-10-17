@@ -89,9 +89,7 @@ function nodeSequenceToString(nodeSeq) {
 export function detectCodeClone(ast, threshold = 10) {
   let nodeSeq = flattenToNodeSequences(ast);
   console.log("nodeseq", nodeSeq);
-  debugger;
   let { str, nodeStrMap } = nodeSequenceToString(nodeSeq);
-  debugger;
   const root = { val: "", len: 0, indexes: [], children: new Array(128) }; // 128 ascii characters
   const clones = {};
   console.log(str, nodeStrMap);
@@ -113,14 +111,19 @@ export function detectCodeClone(ast, threshold = 10) {
     nodeLenThreshold = 7
   ) {
     let validClones = [];
-    for (let c of Object.values(clones)) {
+    for (let cid of Object.keys(clones)) {
       debugger;
+      let c = clones[cid];
       let vc = {
         nodeIndexes: [],
         nodeLen: -1,
         srcLen: -1,
-        toOptimize: true
+        toOptimize: true,
+        id: cid,
+        index: validClones.length,
+        count: 0
       };
+
       let len = c.len;
       for (let start of c.indexes) {
         if (!nodeStrMap.has(start) || !nodeStrMap.has(start + len)) continue;
@@ -143,8 +146,7 @@ export function detectCodeClone(ast, threshold = 10) {
         }
         for (let i = startNodeIndex; i < endNodeIndex; i++) {
           if (nodeSeq[i].end || nodeSeq[i].end == 0) {
-            srcEnd = nodeSeq[i].end;
-            break;
+            if (nodeSeq[i].end > srcEnd) srcEnd = nodeSeq[i].end;
           }
         }
         if (srcEnd - srcStart < srcLenThreshold) continue;
@@ -162,7 +164,8 @@ export function detectCodeClone(ast, threshold = 10) {
         // like course scheduling problem
         if (
           vc.nodeIndexes.length > 0 &&
-          vc.nodeIndexes[vc.nodeIndexes.length - 1] + length > startNodeIndex
+          vc.nodeIndexes[vc.nodeIndexes.length - 1].endNodeIndex >=
+            startNodeIndex
         )
           continue;
         vc.nodeIndexes.push({
@@ -172,8 +175,9 @@ export function detectCodeClone(ast, threshold = 10) {
           srcEnd,
           toOptimize: true
         });
+        vc.count++;
       }
-      if (vc.nodeIndexes.length > 1) validClones.push(vc);
+      if (vc.count > 1) validClones.push(vc);
     }
     console.log(validClones);
     return validClones;
@@ -315,102 +319,36 @@ export function detectCodeClone(ast, threshold = 10) {
   }
 }
 
-// =============================================
-// code clone detection: suffix tree
-// =============================================
-export function detectCodeClone2(src, threshold = 30) {
-  const root = { val: "", len: 0, indexes: [], children: new Array(128) }; // 128 ascii characters
-  const clones = {};
-  for (let i = 0; i < src.length; i++) {
-    let s = src.substr(i);
-    addSuffixToTree(s, i);
-  }
-  console.log(root);
-  console.log(clones);
-  // char: string, character
-  // i: number, index
-  function addSuffixToTree(s, i, rootNode = root) {
-    let j = 0;
-    let node = rootNode;
-    while (j < s.length) {
-      let cCode = s.charCodeAt(j);
-      let next = node.children[cCode];
-      // suffix does not exist in tree
-      if (!next) {
-        let subStr = s.substr(j);
-        node.children[cCode] = {
-          val: s.substr(j),
-          len: node.len + subStr.length,
-          indexes: [j + i],
-          children: new Array(128)
-        };
-        return;
-      }
-
-      // compare next val with subStr
-      let k = 0;
-      while (k < next.val.length) {
-        let kCode = next.val.charCodeAt(k);
-
-        if (k + j == s.length || next.val.charAt(k) != s.charAt(k + j)) {
-          // subStr is shorter than next.val
-          // all previous characters are matched
-          // split node
-          let splitOutStr = next.val.substr(k);
-          let splitOutNode = {
-            val: splitOutStr,
-            len: next.len,
-            indexes: [...next.indexes],
-            children: next.children
-          };
-          next.val = next.val.substring(0, k);
-          next.len -= splitOutStr.length;
-          next.indexes.push(i);
-          next.children = new Array(128);
-          next.children[kCode] = splitOutNode;
-
-          if (next.len >= threshold) {
-            console.log(s.substring(0, k + j));
-            let key = next.indexes[0] + "-" + next.len;
-            clones[key] = {
-              len: next.len,
-              indexes: [...next.indexes]
-            };
-          }
-
-          if (k + j == s.length) return;
-
-          if (next.val.charAt(k) != s.charAt(k + j)) {
-            // at least one character will be matched (to have next)
-            // node needed to be splited
-
-            // create a node for the rest str
-            let sCode = s.charCodeAt(k + j);
-            let sSubStr = s.substr(k + j);
-            next.children[sCode] = {
-              val: sSubStr,
-              len: next.len + sSubStr.length,
-              indexes: [i],
-              children: new Array(128)
-            };
-            return;
-          }
-        }
-        k++;
-      }
-
-      if (k + j == s.length) {
-        next.indexes.push(i);
-        console.log(s);
-        return;
-      }
-
-      // s still has unprocessed characters
-      node = next;
-      j += k;
+export function elimilateClones(clones, src, selectedClonesToOptimize) {
+  if (clones.length == 0) return src;
+  let variableDeclarations = "";
+  let cloneMapForSubstitute = {};
+  for (let cindex of selectedClonesToOptimize) {
+    let c = clones[cindex];
+    let osrc = src.substring(
+      c.nodeIndexes[0].srcStart,
+      c.nodeIndexes[0].srcEnd + 1
+    );
+    variableDeclarations += `{{#vardefine:${c.id}|${osrc}}}`;
+    for (let ci of c.nodeIndexes) {
+      cloneMapForSubstitute[ci.srcStart] = c.index;
     }
   }
-}
 
-// =============================================
-// =============================================
+  // go through the src to substitute clone with variable
+  let prev = 0;
+  let curr = 0;
+  let optCode = "";
+  while (curr < src.length) {
+    if (cloneMapForSubstitute[curr]) {
+      // add substr prev~curr
+      optCode += src.substring(prev, curr);
+      let clone = clones[cloneMapForSubstitute[curr]];
+      optCode += `{{#var:${clone.id}}}`;
+      prev = curr + clone.srcLen;
+      curr = prev;
+    } else curr++;
+  }
+  if (prev < src.length) optCode += src.substring(prev);
+  return variableDeclarations + optCode;
+}

@@ -1,4 +1,4 @@
-const { Collapse, Typography, Button, List, Switch } = antd;
+const { Collapse, Typography, Button, List, Switch, Table } = antd;
 const { Title } = Typography;
 const { Panel } = Collapse;
 import { detectCodeClone } from "../services/optimizer";
@@ -7,7 +7,41 @@ const customPanelStyle = {
   border: 0
 };
 
-export function ClonePanel({ clones, selectedClone, handler }) {
+export function ClonePanel({
+  clones,
+  selectedClone,
+  handler,
+  selectedClonesToOptimize
+}) {
+  const columns = [
+    {
+      title: "ID",
+      dataIndex: "id"
+    },
+    {
+      title: "Length",
+      dataIndex: "srcLen"
+    },
+    {
+      title: "Count",
+      dataIndex: "count"
+    },
+    {
+      title: "Action",
+      dataIndex: "action",
+      render: (text, record, index) => {
+        return <a onClick={cloneOnClick(index)}>Highlight</a>;
+      }
+    }
+  ];
+
+  const rowSelection = {
+    selectedRowKeys: selectedClonesToOptimize,
+    onChange: selectedRowKeys => {
+      handler({ selectedClonesToOptimize: selectedRowKeys });
+    }
+  };
+
   let cloneOnClick = i => () => {
     handler({ selectedClone: i });
     let inputHighlight = [];
@@ -35,6 +69,13 @@ export function ClonePanel({ clones, selectedClone, handler }) {
         style={customPanelStyle}
       >
         <div id="debugger-opt-clone">
+          {clones.length > 0 && (
+            <Table
+              rowSelection={rowSelection}
+              columns={columns}
+              dataSource={clones}
+            />
+          )}
           {clones.length > 0 && (
             <List
               size="small"
