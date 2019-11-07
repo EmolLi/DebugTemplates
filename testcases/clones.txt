@@ -1,3 +1,5 @@
+{{#ifexpr: | yes | no}}dsgcvxdrfvc{{#ifexpr: | yes | no}}afsdgvcxvv{{#ifexpr: | yes | no}}
+
 {{#ifexpr: | yes | no}}aaa{{Test|p1=111}}aaa{{#ifexpr: | yes | no}}aaa{{Test|p1=111}}aaa
 
 {{#ifexpr: | yes | no}}{{#ifexpr: | yes | no}}

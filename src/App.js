@@ -68,7 +68,7 @@ export class App extends React.Component {
     clones: [], // Optimizer
     selectedClone: -1,
     selectedClonesToOptimize: [],
-    optCode: "sdfdsgdfss",
+    optCode: "",
     optCodeValidationStatus: OPT_CODE_VALIDATION_STATUS.PENDING
   };
 
