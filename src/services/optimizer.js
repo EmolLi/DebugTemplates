@@ -112,7 +112,6 @@ export function detectCodeClone(ast, threshold = 10) {
   ) {
     let validClones = [];
     for (let cid of Object.keys(clones)) {
-      debugger;
       let c = clones[cid];
       let vc = {
         nodeIndexes: [],
@@ -331,7 +330,7 @@ export function elimilateClones(clones, src, selectedClonesToOptimize) {
     );
     variableDeclarations += `{{#vardefine:${c.id}|${osrc}}}`;
     for (let ci of c.nodeIndexes) {
-      cloneMapForSubstitute[ci.srcStart] = c.index;
+      cloneMapForSubstitute[ci.srcStart] = c;
     }
   }
 
@@ -339,11 +338,12 @@ export function elimilateClones(clones, src, selectedClonesToOptimize) {
   let prev = 0;
   let curr = 0;
   let optCode = "";
+  debugger;
   while (curr < src.length) {
     if (cloneMapForSubstitute[curr]) {
       // add substr prev~curr
       optCode += src.substring(prev, curr);
-      let clone = clones[cloneMapForSubstitute[curr]];
+      let clone = cloneMapForSubstitute[curr];
       optCode += `{{#var:${clone.id}}}`;
       prev = curr + clone.srcLen;
       curr = prev;

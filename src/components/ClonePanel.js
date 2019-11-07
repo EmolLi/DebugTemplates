@@ -76,31 +76,6 @@ export function ClonePanel({
               dataSource={clones}
             />
           )}
-          {clones.length > 0 && (
-            <List
-              size="small"
-              dataSource={clones}
-              renderItem={(c, i) => (
-                <List.Item
-                  onClick={cloneOnClick(i)}
-                  actions={[
-                    <Switch
-                      size="small"
-                      checked={c.toOptimize}
-                      onChange={() => {
-                        clones[i].toOptimize = !clones[i].toOptimize;
-                        handler({ clones });
-                      }}
-                    />
-                  ]}
-                >
-                  <Typography.Text
-                    mark={i == selectedClone}
-                  >{`clone of length ${c.srcLen}`}</Typography.Text>
-                </List.Item>
-              )}
-            />
-          )}
         </div>
       </Panel>
     </Collapse>

@@ -102,3 +102,7 @@ pre code.disabled {
   /* overflow: scroll; */
   /* background: aliceblue; */
 }
+
+.title-right-icon {
+  float: right;
+}

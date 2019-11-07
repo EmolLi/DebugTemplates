@@ -10,6 +10,7 @@ import { TreeView } from "./components/TreeView.js";
 import { CallStackSection } from "./components/CallStackSection.js";
 import { ParamsTable } from "./components/ParamsTable.js";
 import { OptimizerPane } from "./components/OptimizerPane.js";
+import { OPT_CODE_VALIDATION_STATUS } from "./Enums";
 
 const { React, antd } = window;
 const {
@@ -39,7 +40,9 @@ const cleanState = {
   inputHighlight: null,
   unmatchedBracket: [],
   clones: [],
-  selectedClone: -1
+  selectedClone: -1,
+  optCode: "",
+  optCodeValidationStatus: OPT_CODE_VALIDATION_STATUS.PENDING
 };
 export class App extends React.Component {
   state = {
@@ -64,7 +67,9 @@ export class App extends React.Component {
     },
     clones: [], // Optimizer
     selectedClone: -1,
-    selectedClonesToOptimize: []
+    selectedClonesToOptimize: [],
+    optCode: "sdfdsgdfss",
+    optCodeValidationStatus: OPT_CODE_VALIDATION_STATUS.PENDING
   };
 
   handler = (newState, callback = null) => {
@@ -185,6 +190,21 @@ export class App extends React.Component {
     }
   };
 
+  verifyOptCode = async () => {
+    const { url, params, optCode, title, result } = this.state;
+    let optResult = await apiEvalAsync(optCode, title, url, params);
+    if (result == optResult)
+      this.setState({
+        optCodeValidationStatus: OPT_CODE_VALIDATION_STATUS.SUCCESS
+      });
+    else {
+      this.setState({
+        optCodeValidationStatus: OPT_CODE_VALIDATION_STATUS.ERROR
+      });
+      console.log("OPT:", optResult);
+    }
+  };
+
   render() {
     const {
       src,
@@ -204,7 +224,9 @@ export class App extends React.Component {
       treeView,
       clones,
       selectedClone,
-      selectedClonesToOptimize
+      selectedClonesToOptimize,
+      optCode,
+      optCodeValidationStatus
     } = this.state;
 
     return (
@@ -265,7 +287,10 @@ export class App extends React.Component {
             selectedClone={selectedClone}
             handler={this.handler}
             src={src}
+            optCode={optCode}
             selectedClonesToOptimize={selectedClonesToOptimize}
+            optCodeValidationStatus={optCodeValidationStatus}
+            verifyOptCode={this.verifyOptCode}
           />
         </Col>
       </Row>
