@@ -86,7 +86,7 @@ function nodeSequenceToString(nodeSeq) {
   return { str, nodeStrMap };
 }
 
-export function detectCodeClone(ast, threshold = 10) {
+export function detectCodeClone(ast, approach = 1, threshold = 10) {
   let nodeSeq = flattenToNodeSequences(ast);
   console.log("nodeseq", nodeSeq);
   let { str, nodeStrMap } = nodeSequenceToString(nodeSeq);
@@ -100,28 +100,174 @@ export function detectCodeClone(ast, threshold = 10) {
   }
   console.log(root);
   console.log(clones, 111);
-  return processPossibleClones(clones);
+  let validClones = processPossibleClones(clones);
+  switch (approach) {
+    case 1:
+      selectClonesApproach1(validClones);
+      break;
+    default:
+  }
+  return validClones;
+
+  /* P1: select clone candidate for elimination
+       P1.1 inner conflict
+       P1.2 cross group conflict
+     P2: redesign problem
+       Variable update problem
+
+    Here all clones are valid, we choose clones to optimize as some clones conflict with others
+  */
+  function selectClonesApproach1(validClones) {
+    /*
+      P1. only select clones with no variable
+        P1.1 greedy
+        P1.2 random -> based on order, whoever comes first
+    */
+    // P1: remove clones that contains variable
+    let i = 0;
+    let keys = Object.keys(validClones);
+    while (i < keys.length) {
+      let vc = validClones[keys[i]];
+      if (
+        cloneContainsVariable(
+          vc.nodeIndexes[0].startNodeIndex,
+          vc.nodeIndexes[0].endNodeIndex
+        )
+      ) {
+        // remove
+        console.log("remove ", validClones[keys[i]]);
+        delete validClones[keys[i]];
+        keys.splice(i, 1);
+      } else i++;
+    }
+
+    // P1.1
+    // greedy: remove conflicting inner clones
+    // always keep the clone that terminates earliest
+    // like course scheduling problem
+    let i = 0;
+    keys = Object.keys(validClones);
+    while (i < keys.length) {
+      let vc = validClones[keys[i]];
+      let cur = 1;
+      while (cur < vc.count) {
+        if (vc.nodeIndexes[cur - 1].endNodeIndex >= startNodeIndex) {
+          vc.nodeIndexes.splice(cur, 1);
+          vc.count--;
+        } else cur++;
+      }
+      if (vc.count <= 1) {
+        console.log("remove2 ", validClones[keys[i]]);
+        delete validClones[keys[i]];
+        keys.splice(i, 1);
+      } else i++;
+    }
+
+    // P1.2 random -> based on order, whoever comes first
+    computeCloneGroupConflictInfo();
+    let i = 0;
+    keys = Object.keys(validClones);
+    while (i < keys.length) {
+      let vc = validClones[keys[i]];
+      determineIfOptimizeCloneGroup(vc);
+    }
+
+    // determine if we should optimize clone group
+    // we can optimize it if we do not optimize a group that conflict with it
+    function determineIfOptimizeCloneGroup(cloneGroup) {
+      let toOptimize = true;
+      for (let g of Object.values(cloneGroup.conflictGroups)) {
+        if (validClones[g].toOptimize) {
+          toOptimize = false;
+          break;
+        }
+      }
+      cloneGroup.toOptimize = toOptimize;
+      return toOptimize;
+    }
+
+    function computeCloneGroupConflictInfo() {
+      // let groupConflictMap = {};
+      let clones = cloneGroupsToCloneList(validClones);
+      for (let i = 0; i < clones.length - 1; i++) {
+        for (let j = i + 1; j < clones.length; j++) {
+          let c1 = clones[i];
+          let c2 = clones[j];
+          if (cloneConflict(c1, c2)) {
+            validClones[c1.gid].conflictGroups[c2.gid] = c2.gid;
+            validClones[c2.gid].conflictGroups[c1.gid] = c1.gid;
+          }
+        }
+      }
+    }
+  }
+
+  // flatten clone groups to clone list
+  function cloneGroupsToCloneList(cloneGroups) {
+    let clones = [];
+    for (let group of Object.values(cloneGroups)) {
+      for (let c of group.nodeIndexes) clones.push(c);
+    }
+    return clones;
+  }
+
+  // determine if c1 and c2 conflicts
+  function cloneConflict(c1, c2) {
+    // for c1 and c2 in the same clone group, if they overlap, they conflict
+    if (c1.gid == c2.gid) {
+      if (
+        !(
+          (c1.srcStart < c2.srcStart && c1.srcEnd < c2.srcStart) ||
+          (c1.srcStart > c2.srcEnd && c1.srcEnd > c2.srcEnd)
+        )
+      ) {
+        c1.conflicts.push(c2);
+        c2.conflicts.push(c1);
+        return true;
+      }
+    }
+    // for c1 and c2 exist in different clone group, if they overlap, and one does not include the other, they conflict
+    if (c1.gid != c2.gid) {
+      // not overlap
+      if (
+        (c1.srcStart < c2.srcStart && c1.srcEnd < c2.srcStart) ||
+        (c1.srcStart > c2.srcEnd && c1.srcEnd > c2.srcEnd)
+      )
+        return false;
+      // one include one
+      if (
+        (c1.srcStart >= c2.srcStart && c1.srcEnd <= c2.srcEnd) ||
+        (c1.srcStart <= c2.srcStart && c1.srcEnd >= c2.srcEnd)
+      ) {
+        return false;
+      }
+      c1.conflicts.push(c2);
+      c2.conflicts.push(c1);
+      return true;
+    }
+  }
 
   // 1. map str clones to nodes
   // 2. make sure each clone is valid
-  // 3. remove conflicting clones -> union find? probably just use greedy for now
+  // here we remove all invalid clones.
   function processPossibleClones(
     clones,
     srcLenThreshold = 15,
     nodeLenThreshold = 7
   ) {
-    let validClones = [];
+    let validClones = {};
     for (let cid of Object.keys(clones)) {
       let c = clones[cid];
       let vc = {
         nodeIndexes: [],
+        conflictGroups: {},
         nodeLen: -1,
         srcLen: -1,
-        toOptimize: true,
+        toOptimize: false,
         id: cid,
         index: validClones.length,
         count: 0
-      };
+      }; // FIXME: possible bug here
 
       let len = c.len;
       for (let start of c.indexes) {
@@ -158,28 +304,36 @@ export function detectCodeClone(ast, threshold = 10) {
           console.log("ERROR");
         }
         vc.nodeLen = nodeLen;
-        // greedy: remove conflicting clones
-        // always keep the clone that terminates earliest
-        // like course scheduling problem
-        if (
-          vc.nodeIndexes.length > 0 &&
-          vc.nodeIndexes[vc.nodeIndexes.length - 1].endNodeIndex >=
-            startNodeIndex
-        )
-          continue;
+
         vc.nodeIndexes.push({
+          cid: `${startNodeIndex}-${endNodeIndex}`,
           startNodeIndex,
           endNodeIndex,
           srcStart,
           srcEnd,
+          conflicts: [],
+          gid: vc.id,
           toOptimize: true
         });
         vc.count++;
       }
-      if (vc.count > 1) validClones.push(vc);
+      if (vc.count > 1) validClones[cid] = vc;
     }
     console.log(validClones);
     return validClones;
+  }
+
+  function cloneContainsVariable(nodeIndexStart, nodeIndexEnd) {
+    for (let i = nodeIndexStart; i <= nodeIndexEnd; i++) {
+      let node = nodeSeq[i];
+      switch (node.type) {
+        case "#var":
+        case "#varexists":
+        case "#vardefine":
+          return true;
+      }
+    }
+    return false;
   }
 
   // check if valid statement
@@ -318,6 +472,7 @@ export function detectCodeClone(ast, threshold = 10) {
   }
 }
 
+// based on selected clones, generate optimized code
 export function elimilateClones(clones, src, selectedClonesToOptimize) {
   if (clones.length == 0) return src;
   let variableDeclarations = "";
