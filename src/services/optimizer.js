@@ -119,34 +119,19 @@ export function detectCodeClone(ast, approach = 1, threshold = 10) {
   */
   function selectClonesApproach1(validClones) {
     /*
-      P1. only select clones with no variable
+      P2. only select clones with no variable
         P1.1 greedy
         P1.2 random -> based on order, whoever comes first
     */
     // P1: remove clones that contains variable
-    let i = 0;
-    let keys = Object.keys(validClones);
-    while (i < keys.length) {
-      let vc = validClones[keys[i]];
-      if (
-        cloneContainsVariable(
-          vc.nodeIndexes[0].startNodeIndex,
-          vc.nodeIndexes[0].endNodeIndex
-        )
-      ) {
-        // remove
-        console.log("remove ", validClones[keys[i]]);
-        delete validClones[keys[i]];
-        keys.splice(i, 1);
-      } else i++;
-    }
+    removeClonesWithVariables(validClones);
 
     // P1.1
     // greedy: remove conflicting inner clones
     // always keep the clone that terminates earliest
     // like course scheduling problem
     let i = 0;
-    keys = Object.keys(validClones);
+    let keys = Object.keys(validClones);
     while (i < keys.length) {
       let vc = validClones[keys[i]];
       let cur = 1;
@@ -202,6 +187,83 @@ export function detectCodeClone(ast, approach = 1, threshold = 10) {
     }
   }
 
+  function selectClonesApproach2(validClones) {
+    /* P2.1 remove clones with variables
+       do P1.1 and P1.2 together
+        use dp to select clones to resolve conflict
+
+       P2.2 redesign by starting from the shortest clone -> larger clone can be made up of smaller clones
+    */
+
+    // P2.1 remove clones with varaibles
+    removeClonesWithVariables(validClones);
+    // P1.1 and P1.2 select clones
+    selectClonesDP();
+
+    function selectClonesDP() {
+      // compute conflict info for each clone
+      // put all clone candidates on a timeline
+      // select clones so that 1. no selected clones conflict, 2.the total length of selected clones is maximized
+
+      let clones = cloneGroupsToCloneList(validClones);
+      return recursiveSelectClones(clones);
+      // input: an array of clones
+      function recursiveSelectClones(clones) {
+        // step 1: put all event end on a timeline, larger end comes later, if same end, smaller length comes earlier
+        clones.sort((a, b) => {
+          if (a.srcEnd != b.srcEnd) return a.srcEnd < b.srcEnd ? -1 : 1;
+          else return a.srcEnd - a.srcStart < b.srcEnd - b.srcStart ? -1 : 1;
+        });
+
+        let dp = { 0: { len: 0, selected: {} } };
+        if (clones.length == 0) return dp[0];
+
+        // compute each end token, based on their order
+        let visited = {}; // visited map
+        for (let i = 0; i < clones.length; i++) {
+          let c = clones[i];
+          if (!dp[c.srcEnd]) dp[c.srcEnd] = { len: 0, selected: {} };
+
+          // take c
+          let prev = getPrevDPValue(i, c);
+          let len = prev.len + c.srcEnd - c.srcStart + 1;
+          // internal clones can be replaced too
+          let internalResult =
+            c.includes.length > 0 ? recursiveSelectClones(c.includes) : null;
+          if (internalResult) len += internalResult.len;
+          if (len > dp[c.srcEnd].len) {
+            dp[c.srcEnd].len = len;
+            dp[c.srcEnd].selected = {
+              ...prev.selected,
+              [c.cid]: c.cid
+            };
+            if (internalResult)
+              dp[c.srcEnd].selected = {
+                ...dp[c.srcEnd].selected,
+                ...internalResult.selected
+              };
+          }
+
+          // do not take c, take its conflict
+          let prevConflict = getPrevDPValue(i, c, true);
+          if (prevConflict.len > dp[c.srcEnd].len) {
+            dp[c.srcEnd].len = prevConflict.len;
+            dp[c.srcEnd].selected = { ...prevConflict.selected };
+          }
+        }
+        return dp[clones[clones.length - 1].srcEnd];
+
+        function getPrevDPValue(i, clone, allowConflict = false) {
+          for (let j = i - 1; j >= 0; j--) {
+            let end = clones[j].srcEnd;
+            if (!allowConflict && end < clone.srcStart) return dp[end];
+            if (allowConflict && end < clone.srcEnd) return dp[end];
+          }
+          return dp[0];
+        }
+      }
+    }
+  }
   // flatten clone groups to clone list
   function cloneGroupsToCloneList(cloneGroups) {
     let clones = [];
@@ -211,6 +273,25 @@ export function detectCodeClone(ast, approach = 1, threshold = 10) {
     return clones;
   }
 
+  // input: valid clone groups
+  function removeClonesWithVariables(validClones) {
+    let i = 0;
+    let keys = Object.keys(validClones);
+    while (i < keys.length) {
+      let vc = validClones[keys[i]];
+      if (
+        cloneContainsVariable(
+          vc.nodeIndexes[0].startNodeIndex,
+          vc.nodeIndexes[0].endNodeIndex
+        )
+      ) {
+        // remove
+        console.log("remove ", validClones[keys[i]]);
+        delete validClones[keys[i]];
+        keys.splice(i, 1);
+      } else i++;
+    }
+  }
   // determine if c1 and c2 conflicts
   function cloneConflict(c1, c2) {
     // for c1 and c2 in the same clone group, if they overlap, they conflict
@@ -235,10 +316,13 @@ export function detectCodeClone(ast, approach = 1, threshold = 10) {
       )
         return false;
       // one include one
-      if (
-        (c1.srcStart >= c2.srcStart && c1.srcEnd <= c2.srcEnd) ||
-        (c1.srcStart <= c2.srcStart && c1.srcEnd >= c2.srcEnd)
-      ) {
+      if (c1.srcStart >= c2.srcStart && c1.srcEnd <= c2.srcEnd) {
+        // c2 includes c1
+        c2.includes.push(c1);
+        return false;
+      } else if (c1.srcStart <= c2.srcStart && c1.srcEnd >= c2.srcEnd) {
+        // c1 includes c2
+        c1.includes.push(c2);
         return false;
       }
       c1.conflicts.push(c2);
@@ -312,6 +396,7 @@ export function detectCodeClone(ast, approach = 1, threshold = 10) {
           srcStart,
           srcEnd,
           conflicts: [],
+          includes: [],
           gid: vc.id,
           toOptimize: true
         });
