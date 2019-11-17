@@ -229,7 +229,9 @@ export function detectCodeClone(ast, approach = 1, threshold = 10) {
           let len = prev.len + c.srcEnd - c.srcStart + 1;
           // internal clones can be replaced too
           let internalResult =
-            c.includes.length > 0 ? recursiveSelectClones(c.includes) : null;
+            c.internalClones.length > 0
+              ? recursiveSelectClones(c.internalClones)
+              : null;
           if (internalResult) len += internalResult.len;
           if (len > dp[c.srcEnd].len) {
             dp[c.srcEnd].len = len;
@@ -263,14 +265,6 @@ export function detectCodeClone(ast, approach = 1, threshold = 10) {
         }
       }
     }
-  }
-  // flatten clone groups to clone list
-  function cloneGroupsToCloneList(cloneGroups) {
-    let clones = [];
-    for (let group of Object.values(cloneGroups)) {
-      for (let c of group.nodeIndexes) clones.push(c);
-    }
-    return clones;
   }
 
   // input: valid clone groups
@@ -317,18 +311,27 @@ export function detectCodeClone(ast, approach = 1, threshold = 10) {
         return false;
       // one include one
       if (c1.srcStart >= c2.srcStart && c1.srcEnd <= c2.srcEnd) {
-        // c2 includes c1
-        c2.includes.push(c1);
+        // c2 internalClones c1
+        c2.internalClones.push(c1);
         return false;
       } else if (c1.srcStart <= c2.srcStart && c1.srcEnd >= c2.srcEnd) {
         // c1 includes c2
-        c1.includes.push(c2);
+        c1.internalClones.push(c2);
         return false;
       }
       c1.conflicts.push(c2);
       c2.conflicts.push(c1);
       return true;
     }
+  }
+
+  // flatten clone groups to clone list
+  function cloneGroupsToCloneList(cloneGroups) {
+    let clones = [];
+    for (let group of Object.values(cloneGroups)) {
+      for (let c of group.nodeIndexes) clones.push(c);
+    }
+    return clones;
   }
 
   // 1. map str clones to nodes
@@ -396,7 +399,7 @@ export function detectCodeClone(ast, approach = 1, threshold = 10) {
           srcStart,
           srcEnd,
           conflicts: [],
-          includes: [],
+          internalClones: [],
           gid: vc.id,
           toOptimize: true
         });
@@ -554,6 +557,91 @@ export function detectCodeClone(ast, approach = 1, threshold = 10) {
         return true;
     }
     return false;
+  }
+}
+
+// based on selected clones, generate optimized code
+// support nested variable decl
+export function redesignCode(cloneGroups, src, selectedClonesToOptimize) {
+  // Step 1: generate variable declarations
+  let variableDeclarations = generateVariableDeclarations(
+    Object.values(cloneGroups)
+  );
+  // Step 2: generate optimized code using variables
+  // we are only going use top level variables to generate src
+  let clones = cloneGroupsToCloneList(cloneGroups);
+  let tlics = findTLICs(clones);
+  let optSrc = generateCodeWithVars(tlics, 0, src.length);
+  return variableDeclarations + "\n" + optSrc;
+
+  function generateVariableDeclarations(cloneGroupsL) {
+    // sort all clone groups by length.
+    cloneGroupsL.sort((a, b) => (a.srcLen < b.srcLen ? -1 : 1));
+
+    // declare variable for each clone group
+    let variableDeclarations = "";
+    cloneGroupsL.forEach(cg => {
+      variableDeclarations += declareVar(ct);
+    });
+    return variableDeclarations;
+
+    // get the representative of a clone group
+    function getCloneGroupRepresentative(cg) {
+      for (let c of cg.nodeIndexes) {
+        if (c.selected) return c;
+      }
+    }
+
+    // generate variable declaration for one clone
+    // ct (a clone) is used as template/ representative for its group
+    function declareVar(ct) {
+      tlics = findTLICs(ct.internalClones);
+      let codeGen = generateCodeWithVars(tlics);
+      return `{{#vardefine:${ct.gid}|${codeGen}}}`;
+    }
+  }
+
+  // ct can be made up with other clones (internal clones).
+  // It may have multiple levels of internal clones
+  // (e.g. A includes B and C, B includes C, here we have two levels of internal clones, i.e. A->B->C)
+  // We only want to use the top level internal clones (TLIC) in our declaration
+  // (e.g. even though A includes B and C, we should only use B in our declaration for A, as C is part of B)
+  // a var declaration can consist of literals and TLICs.
+  function findTLICs(clones) {
+    let tlics = [];
+    outer: for (let c of clones) {
+      for (let j of clones) {
+        if (j != c && j.internalClones.includes(c)) continue outer;
+      }
+      tlics.push(c);
+    }
+    return tlics;
+  }
+
+  // generate code from srcStart to srcEnd using the given variables
+  // vars are TLICs for the current scope
+  // the current scope can be src, a variable etc.
+  // for src, TLICs would be variables that is not internal clone of any other clone
+  // @input: vars, Clone[]
+  // @input: srcStart, int
+  // @input: srcEnd, int (exclusive)
+  function generateCodeWithVars(vars, srcStart, srcEnd) {
+    // sort based on position
+    vars.sort((a, b) => {
+      if (a.srcEnd != b.srcEnd) return a.srcEnd < b.srcEnd ? -1 : 1;
+      else return a.srcEnd - a.srcStart < b.srcEnd - b.srcStart ? -1 : 1;
+    });
+
+    let prev = srcStart;
+    let optCode = "";
+
+    vars.forEach(v => {
+      optCode += src.substring(prev, v.srcStart);
+      optCode += `{{#var:${v.gid}}}`;
+      prev = v.srcEnd + 1;
+    });
+    optCode += src.substring(prev, srcEnd);
+    return optCode;
   }
 }
 
