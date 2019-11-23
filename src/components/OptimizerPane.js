@@ -1,6 +1,6 @@
 const { Typography, Button } = antd;
 const { Title } = Typography;
-import { detectCodeClone, elimilateClones } from "../services/optimizer";
+import { detectCodeClone, redesignCode } from "../services/optimizer";
 import { ClonePanel } from "./ClonePanel";
 import { CodePad } from "./CodePad";
 import { OPT_CODE_VALIDATION_STATUS } from "../Enums";
@@ -31,7 +31,7 @@ export function OptimizerPane({
   function generateOptimizedCode() {
     console.log("generate");
     if (!clones) return;
-    let optCode = elimilateClones(clones, src, selectedClonesToOptimize);
+    let optCode = redesignCode(clones, src);
     console.log(optCode);
     handler({ optCode }, verifyOptCode);
   }

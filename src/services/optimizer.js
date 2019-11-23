@@ -1,7 +1,4 @@
 // const
-export function detectCodeCloneASTSuffix(ast) {
-  // flatten to node sequence
-}
 
 // special node token
 const END_OF_BRANCH = {
@@ -86,7 +83,7 @@ function nodeSequenceToString(nodeSeq) {
   return { str, nodeStrMap };
 }
 
-export function detectCodeClone(ast, approach = 1, threshold = 10) {
+export function detectCodeClone(ast, approach = 2, threshold = 10) {
   let nodeSeq = flattenToNodeSequences(ast);
   console.log("nodeseq", nodeSeq);
   let { str, nodeStrMap } = nodeSequenceToString(nodeSeq);
@@ -105,9 +102,12 @@ export function detectCodeClone(ast, approach = 1, threshold = 10) {
     case 1:
       selectClonesApproach1(validClones);
       break;
+    case 2:
+      selectClonesApproach2(validClones);
     default:
   }
-  return validClones;
+  debugger;
+  return Object.values(validClones);
 
   /* P1: select clone candidate for elimination
        P1.1 inner conflict
@@ -124,6 +124,8 @@ export function detectCodeClone(ast, approach = 1, threshold = 10) {
         P1.2 random -> based on order, whoever comes first
     */
     // P1: remove clones that contains variable
+    debugger;
+    console.log(validClones);
     removeClonesWithVariables(validClones);
 
     // P1.1
@@ -136,7 +138,10 @@ export function detectCodeClone(ast, approach = 1, threshold = 10) {
       let vc = validClones[keys[i]];
       let cur = 1;
       while (cur < vc.count) {
-        if (vc.nodeIndexes[cur - 1].endNodeIndex >= startNodeIndex) {
+        if (
+          vc.nodeIndexes[cur - 1].endNodeIndex >=
+          vc.nodeIndexes[cur].startNodeIndex
+        ) {
           vc.nodeIndexes.splice(cur, 1);
           vc.count--;
         } else cur++;
@@ -148,12 +153,12 @@ export function detectCodeClone(ast, approach = 1, threshold = 10) {
       } else i++;
     }
 
+    debugger;
     // P1.2 random -> based on order, whoever comes first
     computeCloneGroupConflictInfo();
-    let i = 0;
-    keys = Object.keys(validClones);
-    while (i < keys.length) {
-      let vc = validClones[keys[i]];
+    debugger;
+
+    for (let vc of Object.values(validClones)) {
       determineIfOptimizeCloneGroup(vc);
     }
 
@@ -198,7 +203,9 @@ export function detectCodeClone(ast, approach = 1, threshold = 10) {
     // P2.1 remove clones with varaibles
     removeClonesWithVariables(validClones);
     // P1.1 and P1.2 select clones
-    selectClonesDP();
+    let selectedClones = selectClonesDP();
+    console.log(selectedClones, "lllllllll");
+    setToOptimizeOnClones(selectedClones, validClones);
 
     function selectClonesDP() {
       // compute conflict info for each clone
@@ -237,7 +244,7 @@ export function detectCodeClone(ast, approach = 1, threshold = 10) {
             dp[c.srcEnd].len = len;
             dp[c.srcEnd].selected = {
               ...prev.selected,
-              [c.cid]: c.cid
+              [c.cid]: c
             };
             if (internalResult)
               dp[c.srcEnd].selected = {
@@ -265,9 +272,29 @@ export function detectCodeClone(ast, approach = 1, threshold = 10) {
         }
       }
     }
+
+    function setToOptimizeOnClones(selectedClones, cloneGroupMap) {
+      // remove clones from cloneGroupMap that are not selected
+      let groupKeys = Object.keys(cloneGroupMap);
+      for (let gid of groupKeys) {
+        let cg = cloneGroupMap[gid];
+        let i = 0;
+        while (i < cg.nodeIndexes.length) {
+          let cid = cg.nodeIndexes[i].cid;
+          // clone not selected
+          if (!selectedClones.selected[cid]) {
+            cg.nodeIndexes.splice(i, 1);
+            cg.count--;
+          } else i++;
+        }
+
+        if (cg.count == 0) delete cloneGroupMap[gid];
+        else cloneGroupMap[gid].toOptimize = true;
+      }
+    }
   }
 
-  // input: valid clone groups
+  // input: valid clone groups (map)
   function removeClonesWithVariables(validClones) {
     let i = 0;
     let keys = Object.keys(validClones);
@@ -323,15 +350,6 @@ export function detectCodeClone(ast, approach = 1, threshold = 10) {
       c2.conflicts.push(c1);
       return true;
     }
-  }
-
-  // flatten clone groups to clone list
-  function cloneGroupsToCloneList(cloneGroups) {
-    let clones = [];
-    for (let group of Object.values(cloneGroups)) {
-      for (let c of group.nodeIndexes) clones.push(c);
-    }
-    return clones;
   }
 
   // 1. map str clones to nodes
@@ -562,17 +580,19 @@ export function detectCodeClone(ast, approach = 1, threshold = 10) {
 
 // based on selected clones, generate optimized code
 // support nested variable decl
-export function redesignCode(cloneGroups, src, selectedClonesToOptimize) {
+export function redesignCode(cloneGroups, src) {
   // Step 1: generate variable declarations
-  let variableDeclarations = generateVariableDeclarations(
-    Object.values(cloneGroups)
-  );
+  let variableDeclarations = generateVariableDeclarations(cloneGroups);
+  // console.log(variableDeclarations, "555555555555");
+  let cloneGroupsMap = {};
+  cloneGroups.forEach(cg => (cloneGroupsMap[cg.id] = cg));
   // Step 2: generate optimized code using variables
   // we are only going use top level variables to generate src
-  let clones = cloneGroupsToCloneList(cloneGroups);
+  let clones = cloneGroupsToCloneList(cloneGroupsMap);
+  debugger;
   let tlics = findTLICs(clones);
   let optSrc = generateCodeWithVars(tlics, 0, src.length);
-  return variableDeclarations + "\n" + optSrc;
+  return variableDeclarations + optSrc;
 
   function generateVariableDeclarations(cloneGroupsL) {
     // sort all clone groups by length.
@@ -581,6 +601,8 @@ export function redesignCode(cloneGroups, src, selectedClonesToOptimize) {
     // declare variable for each clone group
     let variableDeclarations = "";
     cloneGroupsL.forEach(cg => {
+      let ct = getCloneGroupRepresentative(cg);
+      debugger;
       variableDeclarations += declareVar(ct);
     });
     return variableDeclarations;
@@ -588,15 +610,15 @@ export function redesignCode(cloneGroups, src, selectedClonesToOptimize) {
     // get the representative of a clone group
     function getCloneGroupRepresentative(cg) {
       for (let c of cg.nodeIndexes) {
-        if (c.selected) return c;
+        if (c.toOptimize) return c;
       }
     }
 
     // generate variable declaration for one clone
     // ct (a clone) is used as template/ representative for its group
     function declareVar(ct) {
-      tlics = findTLICs(ct.internalClones);
-      let codeGen = generateCodeWithVars(tlics);
+      let tlics = findTLICs(ct.internalClones);
+      let codeGen = generateCodeWithVars(tlics, ct.srcStart, ct.srcEnd + 1);
       return `{{#vardefine:${ct.gid}|${codeGen}}}`;
     }
   }
@@ -643,6 +665,15 @@ export function redesignCode(cloneGroups, src, selectedClonesToOptimize) {
     optCode += src.substring(prev, srcEnd);
     return optCode;
   }
+}
+
+// flatten clone groups to clone list
+function cloneGroupsToCloneList(cloneGroups) {
+  let clones = [];
+  for (let group of Object.values(cloneGroups)) {
+    for (let c of group.nodeIndexes) clones.push(c);
+  }
+  return clones;
 }
 
 // based on selected clones, generate optimized code
