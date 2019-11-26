@@ -1,0 +1,2 @@
+{{#ifexpr: | yes | no}}aaa{{Test|p1=111}}aaabk
+{{#ifexpr: | yes | no}}aaa{{Test|p1=111}}aaa

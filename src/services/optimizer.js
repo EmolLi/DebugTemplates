@@ -32,17 +32,40 @@ const EndToken = id => ({
   id,
   parent: null
 });
-
+const blockRequiredTypes = {
+  template: "template",
+  tplarg: "tplarg",
+  ext: "ext",
+  part: "part",
+  vardefine: "vardefine",
+  "#vardefineecho": "#vardefineecho",
+  "#var": "#var",
+  "#varexists": "#varexists",
+  "#var_final": "#var_final",
+  "#expr": "#expr",
+  "#if": "#if",
+  "#ifeq": "#ifeq",
+  "#iferror": "#iferror",
+  "#ifexpr": "#ifexpr",
+  "#ifexist": "#ifexist",
+  "#rel2abs": "#rel2abs",
+  "#switch": "#switch",
+  "#time": "#time",
+  "#timel": "#timel",
+  "#titleparts": "#titleparts",
+  "#len": "#len",
+  "#pos": "#pos",
+  "#rpos": "#rpos",
+  "#sub": "#sub",
+  padleft: "padleft",
+  padright: "padright",
+  "#replace": "#replace",
+  "#explode": "#explode"
+};
 function flattenToNodeSequences(ast) {
   let seq = [];
   let blockRequired = false;
-  if (
-    ast.type == "template" ||
-    ast.type == "tplarg" ||
-    ast.type == "ext" ||
-    ast.type == "part"
-  )
-    blockRequired = true;
+  if (blockRequiredTypes[ast.type]) blockRequired = true;
   if (blockRequired) seq.push(BeginToken(ast.id));
   seq.push(ast);
 
@@ -92,6 +115,7 @@ export function detectCodeClone(ast, approach = 2, threshold = 10) {
   console.log(str, nodeStrMap);
 
   for (let i = 0; i < nodeSeq.length; i++) {
+    if (nodeSeq[i] == END_OF_BRANCH || nodeSeq.type == "END") continue;
     let s = str.substr(nodeSeq[i]._strI);
     addSuffixToTree(s, nodeSeq[i]._strI);
   }
@@ -175,21 +199,6 @@ export function detectCodeClone(ast, approach = 2, threshold = 10) {
       cloneGroup.toOptimize = toOptimize;
       return toOptimize;
     }
-
-    function computeCloneGroupConflictInfo() {
-      // let groupConflictMap = {};
-      let clones = cloneGroupsToCloneList(validClones);
-      for (let i = 0; i < clones.length - 1; i++) {
-        for (let j = i + 1; j < clones.length; j++) {
-          let c1 = clones[i];
-          let c2 = clones[j];
-          if (cloneConflict(c1, c2)) {
-            validClones[c1.gid].conflictGroups[c2.gid] = c2.gid;
-            validClones[c2.gid].conflictGroups[c1.gid] = c1.gid;
-          }
-        }
-      }
-    }
   }
 
   function selectClonesApproach2(validClones) {
@@ -203,6 +212,7 @@ export function detectCodeClone(ast, approach = 2, threshold = 10) {
     // P2.1 remove clones with varaibles
     removeClonesWithVariables(validClones);
     // P1.1 and P1.2 select clones
+    computeCloneGroupConflictInfo(validClones);
     let selectedClones = selectClonesDP();
     console.log(selectedClones, "lllllllll");
     setToOptimizeOnClones(selectedClones, validClones);
@@ -234,6 +244,7 @@ export function detectCodeClone(ast, approach = 2, threshold = 10) {
           // take c
           let prev = getPrevDPValue(i, c);
           let len = prev.len + c.srcEnd - c.srcStart + 1;
+          debugger;
           // internal clones can be replaced too
           let internalResult =
             c.internalClones.length > 0
@@ -294,6 +305,20 @@ export function detectCodeClone(ast, approach = 2, threshold = 10) {
     }
   }
 
+  function computeCloneGroupConflictInfo(validClones) {
+    // let groupConflictMap = {};
+    let clones = cloneGroupsToCloneList(validClones);
+    for (let i = 0; i < clones.length - 1; i++) {
+      for (let j = i + 1; j < clones.length; j++) {
+        let c1 = clones[i];
+        let c2 = clones[j];
+        if (cloneConflict(c1, c2)) {
+          validClones[c1.gid].conflictGroups[c2.gid] = c2.gid;
+          validClones[c2.gid].conflictGroups[c1.gid] = c1.gid;
+        }
+      }
+    }
+  }
   // input: valid clone groups (map)
   function removeClonesWithVariables(validClones) {
     let i = 0;
@@ -373,49 +398,47 @@ export function detectCodeClone(ast, approach = 2, threshold = 10) {
         index: validClones.length,
         count: 0
       }; // FIXME: possible bug here
+      debugger;
+      // let len = c.len;
+      let sampleCloneStart = c.indexes[0];
+      let len = determineExprBoundary(sampleCloneStart, c.len);
+      if (len <= 0) continue;
 
-      let len = c.len;
-      for (let start of c.indexes) {
-        if (!nodeStrMap.has(start) || !nodeStrMap.has(start + len)) continue;
+      // check nodeLenThreshold
+      let startNodeIndex = nodeStrMap.get(sampleCloneStart)._nodeSeqI;
+      let endNodeIndex = nodeStrMap.get(sampleCloneStart + len)._nodeSeqI - 1;
+      endNodeIndex = getCloneValidStatement(startNodeIndex, endNodeIndex);
+      if (endNodeIndex < 0) continue;
 
-        // check nodeLenThreshold
-        let startNodeIndex = nodeStrMap.get(start)._nodeSeqI;
-        let endNodeIndex = nodeStrMap.get(start + len)._nodeSeqI - 1;
-        let nodeLen = endNodeIndex - startNodeIndex + 1;
-        if (nodeLen < nodeLenThreshold) continue;
+      let nodeLen = endNodeIndex - startNodeIndex + 1;
+      if (nodeLen < nodeLenThreshold) continue;
 
-        // check srcLenThreshold
-        let srcStart = -1;
-        let srcEnd = -1;
-        for (let i = startNodeIndex; i < endNodeIndex; i++) {
-          // special token like beginToken and endToken does not have start and end attribute
-          if (nodeSeq[i].start || nodeSeq[i].start == 0) {
-            srcStart = nodeSeq[i].start;
-            break;
-          }
-        }
-        for (let i = startNodeIndex; i < endNodeIndex; i++) {
-          if (nodeSeq[i].end || nodeSeq[i].end == 0) {
-            if (nodeSeq[i].end > srcEnd) srcEnd = nodeSeq[i].end;
-          }
-        }
-        if (srcEnd - srcStart < srcLenThreshold) continue;
-        vc.srcLen = srcEnd - srcStart + 1;
+      let { srcLen, srcStart, srcEnd } = getSrcLen(
+        startNodeIndex,
+        endNodeIndex
+      );
+      if (srcEnd - srcStart < srcLenThreshold) continue;
+      let tempSrc = (vc = { ...vc, nodeLen, srcLen, count: 0 });
 
-        // check if valid statement
-        // matching begin tokens and end tokens
-        if (!isCloneValidStatement(startNodeIndex, endNodeIndex)) continue;
-        if (vc.nodeLen != -1 && vc.nodeLen != nodeLen) {
-          console.log("ERROR");
-        }
-        vc.nodeLen = nodeLen;
+      for (let i = 0; i < c.indexes.length; i++) {
+        debugger;
+        let start = c.indexes[i];
+
+        if (!nodeStrMap.has(start)) continue;
+
+        let _startNodeIndex = nodeStrMap.get(start)._nodeSeqI;
+        let _endNodeIndex = _startNodeIndex + nodeLen - 1;
+        if (_endNodeIndex >= nodeSeq.length) continue;
+        let cInfo = getSrcLen(_startNodeIndex, _endNodeIndex);
+
+        if (cInfo.srcLen != vc.srcLen) continue;
 
         vc.nodeIndexes.push({
-          cid: `${startNodeIndex}-${endNodeIndex}`,
-          startNodeIndex,
-          endNodeIndex,
-          srcStart,
-          srcEnd,
+          cid: `${_startNodeIndex}-${_endNodeIndex}`,
+          startNodeIndex: _startNodeIndex,
+          endNodeIndex: _endNodeIndex,
+          srcStart: cInfo.srcStart,
+          srcEnd: cInfo.srcEnd,
           conflicts: [],
           internalClones: [],
           gid: vc.id,
@@ -427,6 +450,38 @@ export function detectCodeClone(ast, approach = 2, threshold = 10) {
     }
     console.log(validClones);
     return validClones;
+
+    // some nodeIndexEnd may be in the middle of some node, but there is a valid expression inside the str
+    // try to look for a node before the end, to make the expr valid
+    // return resoloved length
+    function determineExprBoundary(nodeStrStart, length) {
+      if (!nodeStrMap.has(nodeStrStart)) return -1;
+
+      while (length > 0) {
+        if (nodeStrMap.has(nodeStrStart + length)) return length;
+        length--;
+      }
+      return -1;
+    }
+
+    function getSrcLen(startNodeIndex, endNodeIndex) {
+      // check srcLenThreshold
+      let srcStart = -1;
+      let srcEnd = -1;
+      for (let i = startNodeIndex; i < endNodeIndex; i++) {
+        // special token like beginToken and endToken does not have start and end attribute
+        if (nodeSeq[i].start || nodeSeq[i].start == 0) {
+          srcStart = nodeSeq[i].start;
+          break;
+        }
+      }
+      for (let i = startNodeIndex; i < endNodeIndex; i++) {
+        if (nodeSeq[i].end || nodeSeq[i].end == 0) {
+          if (nodeSeq[i].end > srcEnd) srcEnd = nodeSeq[i].end;
+        }
+      }
+      return { srcLen: srcEnd - srcStart + 1, srcStart, srcEnd };
+    }
   }
 
   function cloneContainsVariable(nodeIndexStart, nodeIndexEnd) {
@@ -442,20 +497,30 @@ export function detectCodeClone(ast, approach = 2, threshold = 10) {
     return false;
   }
 
-  // check if valid statement
+  // get valid statement from clone
   // matching begin tokens and end tokens
-  function isCloneValidStatement(startNodeIndex, endNodeIndex) {
+  function getCloneValidStatement(startNodeIndex, endNodeIndex) {
     let stack = [];
+    let validStatementsEndIndex = [];
     for (let i = startNodeIndex; i <= endNodeIndex; i++) {
       let node = nodeSeq[i];
       if (node.type == "BEGIN_TOKEN") stack.push(node);
       else if (node.type == "END_TOKEN") {
-        if (stack.length == 0) return false;
-        if (stack[stack.length - 1].id != node.id) return false;
+        if (stack.length == 0) {
+          console.log("Error: END_TOKEN_E1");
+          break;
+        }
+        if (stack[stack.length - 1].id != node.id) {
+          console.log("Error: END_TOKEN_E2");
+          break;
+        }
         stack.pop();
       }
+      if (stack.length == 0) validStatementsEndIndex.push(i);
     }
-    return stack.length == 0;
+
+    if (validStatementsEndIndex.length == 0) return -1;
+    return validStatementsEndIndex[validStatementsEndIndex.length - 1];
   }
   // char: string, character
   // i: number, index

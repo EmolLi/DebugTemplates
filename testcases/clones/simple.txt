@@ -1,0 +1,1 @@
+{{#ifexpr: | yes | no}}aaa{{#ifexpr: | yes | no}}fdg{{#ifexpr: | yes | no}}

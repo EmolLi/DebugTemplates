@@ -1,0 +1,3 @@
+{{#ifexpr: | yes | no}}{{#ifexpr: | yes | no}}
+{{#ifexpr: | yesss | no00}}{{#ifexpr: | yesss | no00}}
+{{#ifexpr: | yesss | no11}}{{#ifexpr: | yesss | no11}}
