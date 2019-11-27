@@ -130,7 +130,6 @@ export function detectCodeClone(ast, approach = 2, threshold = 10) {
       selectClonesApproach2(validClones);
     default:
   }
-  debugger;
   return Object.values(validClones);
 
   /* P1: select clone candidate for elimination
@@ -148,7 +147,6 @@ export function detectCodeClone(ast, approach = 2, threshold = 10) {
         P1.2 random -> based on order, whoever comes first
     */
     // P1: remove clones that contains variable
-    debugger;
     console.log(validClones);
     removeClonesWithVariables(validClones);
 
@@ -177,9 +175,9 @@ export function detectCodeClone(ast, approach = 2, threshold = 10) {
       } else i++;
     }
 
-    debugger;
     // P1.2 random -> based on order, whoever comes first
-    computeCloneGroupConflictInfo();
+    computeCloneGroupConflictInfo(validClones);
+    removeDuplicateInternalClones(validClones);
     debugger;
 
     for (let vc of Object.values(validClones)) {
@@ -213,6 +211,7 @@ export function detectCodeClone(ast, approach = 2, threshold = 10) {
     removeClonesWithVariables(validClones);
     // P1.1 and P1.2 select clones
     computeCloneGroupConflictInfo(validClones);
+    removeDuplicateInternalClones(validClones);
     let selectedClones = selectClonesDP();
     console.log(selectedClones, "lllllllll");
     setToOptimizeOnClones(selectedClones, validClones);
@@ -319,6 +318,48 @@ export function detectCodeClone(ast, approach = 2, threshold = 10) {
       }
     }
   }
+  // for clone group A and clone group B, if all clone group B is an internal piece of a clone in A,
+  // then B can be removed
+  // we call A perfectly includes (PI) B.
+  function removeDuplicateInternalClones(validClones) {
+    debugger;
+    let cloneGKeys = Object.keys(validClones);
+    for (let Akey of cloneGKeys) {
+      // this clone group has no internal clones
+      let A = validClones[Akey];
+      if (!A) continue;
+      let internalClones = A.nodeIndexes[0].internalClones;
+      if (internalClones.length == 0) continue;
+
+      // check if A pi B
+      for (let b of internalClones) {
+        let BKey = b.gid;
+        if (!validClones[BKey]) continue;
+        // if A PI B, every b is included by a
+        let isPI = true;
+        for (let b of validClones[BKey].nodeIndexes) {
+          if (!b.includedBy.find(a => a.gid == Akey)) {
+            isPI = false;
+            break;
+          }
+        }
+        if (isPI) delete validClones[BKey];
+      }
+    }
+
+    // remove removed clones from internalClone list
+    for (let gKey of cloneGKeys) {
+      if (!validClones[gKey]) continue;
+      for (let c of validClones[gKey].nodeIndexes) {
+        let i = 0;
+        while (i < c.internalClones.length) {
+          let internalGk = c.internalClones[i].gid;
+          if (!validClones[internalGk]) c.internalClones.splice(i, 1);
+          else i++;
+        }
+      }
+    }
+  }
   // input: valid clone groups (map)
   function removeClonesWithVariables(validClones) {
     let i = 0;
@@ -365,10 +406,12 @@ export function detectCodeClone(ast, approach = 2, threshold = 10) {
       if (c1.srcStart >= c2.srcStart && c1.srcEnd <= c2.srcEnd) {
         // c2 internalClones c1
         c2.internalClones.push(c1);
+        c1.includedBy.push(c2);
         return false;
       } else if (c1.srcStart <= c2.srcStart && c1.srcEnd >= c2.srcEnd) {
         // c1 includes c2
         c1.internalClones.push(c2);
+        c2.includedBy.push(c1);
         return false;
       }
       c1.conflicts.push(c2);
@@ -382,7 +425,7 @@ export function detectCodeClone(ast, approach = 2, threshold = 10) {
   // here we remove all invalid clones.
   function processPossibleClones(
     clones,
-    srcLenThreshold = 15,
+    srcLenThreshold = 25,
     nodeLenThreshold = 7
   ) {
     let validClones = {};
@@ -398,7 +441,6 @@ export function detectCodeClone(ast, approach = 2, threshold = 10) {
         index: validClones.length,
         count: 0
       }; // FIXME: possible bug here
-      debugger;
       // let len = c.len;
       let sampleCloneStart = c.indexes[0];
       let len = determineExprBoundary(sampleCloneStart, c.len);
@@ -421,7 +463,6 @@ export function detectCodeClone(ast, approach = 2, threshold = 10) {
       let tempSrc = (vc = { ...vc, nodeLen, srcLen, count: 0 });
 
       for (let i = 0; i < c.indexes.length; i++) {
-        debugger;
         let start = c.indexes[i];
 
         if (!nodeStrMap.has(start)) continue;
@@ -441,6 +482,7 @@ export function detectCodeClone(ast, approach = 2, threshold = 10) {
           srcEnd: cInfo.srcEnd,
           conflicts: [],
           internalClones: [],
+          includedBy: [],
           gid: vc.id,
           toOptimize: true
         });
@@ -654,7 +696,6 @@ export function redesignCode(cloneGroups, src) {
   // Step 2: generate optimized code using variables
   // we are only going use top level variables to generate src
   let clones = cloneGroupsToCloneList(cloneGroupsMap);
-  debugger;
   let tlics = findTLICs(clones);
   let optSrc = generateCodeWithVars(tlics, 0, src.length);
   return variableDeclarations + optSrc;
@@ -667,7 +708,6 @@ export function redesignCode(cloneGroups, src) {
     let variableDeclarations = "";
     cloneGroupsL.forEach(cg => {
       let ct = getCloneGroupRepresentative(cg);
-      debugger;
       variableDeclarations += declareVar(ct);
     });
     return variableDeclarations;
@@ -762,7 +802,6 @@ export function elimilateClones(clones, src, selectedClonesToOptimize) {
   let prev = 0;
   let curr = 0;
   let optCode = "";
-  debugger;
   while (curr < src.length) {
     if (cloneMapForSubstitute[curr]) {
       // add substr prev~curr
