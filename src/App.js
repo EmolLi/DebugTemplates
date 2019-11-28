@@ -2,6 +2,7 @@ import { apiParse, apiEvalAsync, apiGetSource } from "./services/api.js";
 
 import { getXMLParser, getAst, mapAstToSrc } from "./services/parser.js";
 import { parserExtensions } from "./services/parserExtensions.js";
+import { getMetrics } from "./services/optEval.js";
 
 import { InputSection } from "./components/InputSection.js";
 import { ErrorSection } from "./components/ErrorSection.js";
@@ -89,6 +90,25 @@ export class App extends React.Component {
     } catch (e) {
       this.setState({ errors: e.message });
     }
+  };
+
+  compareOptCodeWithSrc = () => {
+    const { src, title, url, extensions, optCode, treeView } = this.state;
+    let srcInfo = getMetrics(src, treeView);
+    console.log("[INFO][SRC]: ", srcInfo);
+    apiParse(optCode, title, url, async (k, t) => {
+      if (k == "OK") {
+        var result = window.JSON.parse(t);
+        if (result.parse && result.parse.parsetree) {
+          let ast = result.parse.parsetree["*"]
+            ? getXMLParser()(result.parse.parsetree["*"])
+            : null;
+          let optTreeView = getAst(ast.children[0]);
+          let optInfo = getMetrics(optCode, optTreeView);
+          console.log("[INFO][OPT]: ", optInfo);
+        }
+      }
+    });
   };
 
   getParseTree() {
@@ -291,6 +311,7 @@ export class App extends React.Component {
             selectedClonesToOptimize={selectedClonesToOptimize}
             optCodeValidationStatus={optCodeValidationStatus}
             verifyOptCode={this.verifyOptCode}
+            compareOptCodeWithSrc={this.compareOptCodeWithSrc}
           />
         </Col>
       </Row>

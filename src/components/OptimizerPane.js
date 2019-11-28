@@ -14,7 +14,8 @@ export function OptimizerPane({
   optCode,
   selectedClonesToOptimize,
   optCodeValidationStatus,
-  verifyOptCode
+  verifyOptCode,
+  compareOptCodeWithSrc
 }) {
   function detectClones() {
     console.log(!ast, "222");
@@ -33,7 +34,11 @@ export function OptimizerPane({
     if (!clones) return;
     let optCode = redesignCode(clones, src);
     console.log(optCode);
-    handler({ optCode }, verifyOptCode);
+
+    handler({ optCode }, () => {
+      verifyOptCode();
+      compareOptCodeWithSrc();
+    });
   }
   return (
     <div id="optimizer-pane" className="debugger-section">
