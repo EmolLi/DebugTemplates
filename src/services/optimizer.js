@@ -17,8 +17,9 @@ const END = {
   parent: null
 };
 
-const BeginToken = id => ({
+const BeginToken = (id, isValidExprStart) => ({
   type: "BEGIN_TOKEN",
+  isValidExprStart,
   value: "",
   children: [],
   id,
@@ -32,12 +33,10 @@ const EndToken = id => ({
   id,
   parent: null
 });
-const blockRequiredTypes = {
+const firstLevelTypes = {
   template: "template",
-  tplarg: "tplarg",
   ext: "ext",
-  part: "part",
-  vardefine: "vardefine",
+  "#vardefine": "#vardefine",
   "#vardefineecho": "#vardefineecho",
   "#var": "#var",
   "#varexists": "#varexists",
@@ -62,11 +61,62 @@ const blockRequiredTypes = {
   "#replace": "#replace",
   "#explode": "#explode"
 };
+let secondLevelTypes = {
+  "define variable": "define variable",
+  "specified value": "specified value",
+  "define and print variable": "define and print variable",
+  variable: "variable",
+  "default value": "default value",
+  "if var is defined": "if var is defined",
+  then: "then",
+  else: "else",
+  "output final value for variable": "output final value for variable",
+  "default value": "default value",
+  expr: "expr",
+  "if expr": "if expr",
+  "if string 1 equals": "if string 1 equals",
+  "string 2": "string 2",
+  "if expr is erroneous": "if expr is erroneous",
+  "if page exists": "if page exists",
+  "convert path": "convert path",
+  "base path": "base path",
+  "switch on expr": "switch on expr",
+  "format string": "format string",
+  "date/time object": "date/time object",
+  "language code": "language code",
+  local: "local",
+  "format string": "format string",
+  "get parts of title": "get parts of title",
+  "number of segments": "number of segments",
+  "first segment": "first segment",
+  "length of str": "length of str",
+  "search in str": "search in str",
+  "search term": "search term",
+  offset: "offset",
+  substring: "substring",
+  start: "start",
+  length: "length",
+  "replace pattern in str": "replace pattern in str",
+  pattern: "pattern",
+  "replacement term": "replacement term",
+  "split str": "split str",
+  delimiter: "delimiter",
+  position: "position",
+  limit: "limit",
+  "insert padding": "insert padding",
+  padstring: "padstring",
+  "insert padding": "insert padding",
+  part: "part",
+  tplarg: "tplarg",
+  case: "case",
+  "default case": "default case"
+};
 function flattenToNodeSequences(ast) {
   let seq = [];
   let blockRequired = false;
-  if (blockRequiredTypes[ast.type]) blockRequired = true;
-  if (blockRequired) seq.push(BeginToken(ast.id));
+  if (ast.type && (firstLevelTypes[ast.type] || secondLevelTypes[ast.type]))
+    blockRequired = true;
+  if (blockRequired) seq.push(BeginToken(ast.id, !secondLevelTypes[ast.type]));
   seq.push(ast);
 
   if (ast.children.length == 0) {
@@ -115,10 +165,21 @@ export function detectCodeClone(ast, approach = 2, threshold = 10) {
   console.log(str, nodeStrMap);
 
   for (let i = 0; i < nodeSeq.length; i++) {
-    if (nodeSeq[i] == END_OF_BRANCH || nodeSeq.type == "END") continue;
-    let s = str.substr(nodeSeq[i]._strI);
-    addSuffixToTree(s, nodeSeq[i]._strI);
+    if (
+      (nodeSeq[i].type == "BEGIN_TOKEN" && nodeSeq[i].isValidExprStart) ||
+      !nodeSeq[i].type
+    ) {
+      // find longest valid expr starting from node i.
+      let end = str.length;
+      let endNodeIndex = getCloneValidStatement(i, nodeSeq.length - 1);
+      if (endNodeIndex < i) continue;
+      if (endNodeIndex < nodeSeq.length - 1)
+        end = nodeSeq[endNodeIndex + 1]._strI;
+      let s = str.substring(nodeSeq[i]._strI, end);
+      addSuffixToTree(s, nodeSeq[i]._strI);
+    }
   }
+  debugger;
   console.log(root);
   console.log(clones, 111);
   let validClones = processPossibleClones(clones);
@@ -420,12 +481,85 @@ export function detectCodeClone(ast, approach = 2, threshold = 10) {
     }
   }
 
+  // get valid statement from clone
+  // matching begin tokens and end tokens
+  // function getCloneValidStatement(startNodeIndex, endNodeIndex) {
+  //   let stack = [];
+  //   let validStatementsEndIndex = [];
+  //   for (let i = startNodeIndex; i <= endNodeIndex; i++) {
+  //     let node = nodeSeq[i];
+  //     if (node._type == "equalSign") {
+  //       if (stack.length == 0) break;
+  //     }
+  //     if (node.type == "BEGIN_TOKEN") {
+  //       // check if first level or second level
+  //       if (
+  //         !node.isValidExprStart &&
+  //         (stack.length == 0 || !stack[stack.length - 1].isValidExprStart)
+  //       ) {
+  //         // second level && not wrapped by a first level
+  //         break;
+  //       }
+  //       stack.push(node);
+  //     } else if (node.type == "END_TOKEN") {
+  //       if (stack.length == 0) {
+  //         console.log("Error: END_TOKEN_E1");
+  //         break;
+  //       }
+  //       if (stack[stack.length - 1].id != node.id) {
+  //         console.log("Error: END_TOKEN_E2");
+  //         break;
+  //       }
+  //       stack.pop();
+  //     }
+  //     if (stack.length == 0) validStatementsEndIndex.push(i);
+  //   }
+  //
+  //   if (validStatementsEndIndex.length == 0) return -1;
+  //   return validStatementsEndIndex[validStatementsEndIndex.length - 1];
+  // }
+
+  function getCloneValidStatement(startNodeIndex, endNodeIndex) {
+    let stack = [];
+    let validStatementsEndIndex = [];
+    for (let i = startNodeIndex; i <= endNodeIndex; i++) {
+      let node = nodeSeq[i];
+      if (node._type == "equalSign") {
+        if (stack.length == 0) break;
+      }
+      if (node.type == "BEGIN_TOKEN") {
+        // check if first level or second level
+        // if (
+        //   !node.isValidExprStart &&
+        //   (stack.length == 0 || !stack[stack.length - 1].isValidExprStart)
+        // ) {
+        //   // second level && not wrapped by a first level
+        //   break;
+        // }
+        stack.push(node);
+      } else if (node.type == "END_TOKEN") {
+        if (stack.length == 0) {
+          console.log("Error: END_TOKEN_E1");
+          break;
+        }
+        if (stack[stack.length - 1].id != node.id) {
+          console.log("Error: END_TOKEN_E2");
+          break;
+        }
+        stack.pop();
+      }
+      if (stack.length == 0) validStatementsEndIndex.push(i);
+    }
+
+    if (validStatementsEndIndex.length == 0) return -1;
+    return validStatementsEndIndex[validStatementsEndIndex.length - 1];
+  }
   // 1. map str clones to nodes
   // 2. make sure each clone is valid
   // here we remove all invalid clones.
   function processPossibleClones(
     clones,
-    srcLenThreshold = 25,
+    srcLenThreshold = 15,
     nodeLenThreshold = 7
   ) {
     let validClones = {};
@@ -539,31 +673,6 @@ export function detectCodeClone(ast, approach = 2, threshold = 10) {
     return false;
   }
 
-  // get valid statement from clone
-  // matching begin tokens and end tokens
-  function getCloneValidStatement(startNodeIndex, endNodeIndex) {
-    let stack = [];
-    let validStatementsEndIndex = [];
-    for (let i = startNodeIndex; i <= endNodeIndex; i++) {
-      let node = nodeSeq[i];
-      if (node.type == "BEGIN_TOKEN") stack.push(node);
-      else if (node.type == "END_TOKEN") {
-        if (stack.length == 0) {
-          console.log("Error: END_TOKEN_E1");
-          break;
-        }
-        if (stack[stack.length - 1].id != node.id) {
-          console.log("Error: END_TOKEN_E2");
-          break;
-        }
-        stack.pop();
-      }
-      if (stack.length == 0) validStatementsEndIndex.push(i);
-    }
-
-    if (validStatementsEndIndex.length == 0) return -1;
-    return validStatementsEndIndex[validStatementsEndIndex.length - 1];
-  }
   // char: string, character
   // i: number, index
   function addSuffixToTree(s, i, rootNode = root) {

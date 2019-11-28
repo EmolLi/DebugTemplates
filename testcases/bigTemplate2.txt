@@ -1,5 +1,5 @@
 // passed
-<onlyinclude>{{Infobox
+{{Infobox
 |name         =
 |bodystyle    = padding: 0em; width: 23em;
 |title        =
@@ -23,13 +23,15 @@
 |data3    = {{{boss|}}}
 |label4   = Highlights
 |data4    = {{{highlights|}}}
-
-|header5  = {{#if:{{{previous|{{{next|}}}}}}|Other events}}
+|header5  = {{#if:{{{previous|{{{next|}}}}}}|<table style="width: 100%;">
+<tr><td style="width:50%;">←&nbsp;Previous</td><td style="width:50%;">Next&nbsp;→</td></tr>
+<tr><td style="width:50%">{{{previous}}}</td><td style="width:50%">{{{next}}}</td></tr>
+</table>}}
 |data6    = {{#if:{{{previous|{{{next|}}}}}}|<table style="width: 100%;">
 <tr><td style="width:50%;">←&nbsp;Previous</td><td style="width:50%;">Next&nbsp;→</td></tr>
 <tr><td style="width:50%">{{{previous}}}</td><td style="width:50%">{{{next}}}</td></tr>
 </table>}}
-}}</onlyinclude>
+}}
 
 
 

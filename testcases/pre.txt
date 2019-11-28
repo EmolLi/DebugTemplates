@@ -11,13 +11,12 @@ Creates an expandable box div based box. See also: {{t|Collapsible}}, {{t|Navbox
 :clear= adds a bottom separator line, optionally clearing wither side
 
 ;Example
-<pre>
+
 {{Hidebox
  |state = hide
  |title = {{Spoiler}}
  |content = <center>Some text and links to [[World of Warcraft]]</center>
 }}
-</pre>
 
 text before
 {{Hidebox
@@ -27,7 +26,6 @@ text before
 }}
 text after
 
-<pre>
 {{Hidebox
  |state = hide
  |style = width:100%
@@ -36,7 +34,6 @@ text after
  |tstyle = font-size:1.2em;font-weight:bold;text-align:center
  |clear = both
 }}
-</pre>
 text before
 {{Hidebox
 |state = hide

@@ -24,6 +24,14 @@ export function getAst(node) {
       parent
     };
     node.childNodes.forEach(c => n.children.push(_getAst(c, n)));
+    // mark "=" in
+    if (
+      n.type == "part" &&
+      n.children.length == 3 &&
+      n.children[1].value == "="
+    ) {
+      n.children[1]._type = "equalSign";
+    }
     return n;
   }
   return _getAst(node, null);

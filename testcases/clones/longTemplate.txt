@@ -1,0 +1,56 @@
+{{Hidebox
+|state = hide
+|title = {{Spoiler}}
+|content = <center>Some text and links to [[World of Warcraft]]</center>
+}}
+
+text before
+{{Hidebox
+|state = hide
+|title = {{Spoiler}}
+|content = <center>Some text and links to [[World of Warcraft]]</center>
+}}
+text after
+
+{{Hidebox
+ |state = hide
+ |title = {{Spoiler}}
+ |content = <center>Some text and links to [[World of Warcraft]]</center>
+}}
+
+
+{{Hidebox
+|state = hide
+|style = width:100%
+|title = <span style="float:left">9/22</span> [[World of Warcraft]]
+|content = {{User_blog:Raylan13/News_Roundup_7/24}}
+|tstyle = font-size:1.2em;font-weight:bold;text-align:center
+|clear = both
+}}{{Hidebox
+|state = hide
+|style = width:100%
+|title = <span style="float:left">9/22</span> [[World of Warcraft]]
+|content = {{User_blog:Raylan13/News_Roundup_7/24}}
+|tstyle = font-size:1.2em;font-weight:bold;text-align:center
+|clear = both
+}}
+
+{{Test|p1={{Hidebox
+|state = hide
+|style = width:100%
+|title = <span style="float:left">9/22</span> [[World of Warcraft]]
+|content = {{User_blog:Raylan13/News_Roundup_7/24}}
+|tstyle = font-size:1.2em;font-weight:bold
+|clear = both
+}}}}
+
+text before
+{{Hidebox
+|state = hide
+|style = width:100%
+|title = <span style="float:left">9/22</span> [[World of Warcraft]]
+|content = {{User_blog:Raylan13/News_Roundup_7/24}}
+|tstyle = font-size:1.2em;font-weight:bold
+|clear = both
+}}
+text after

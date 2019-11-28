@@ -1,0 +1,34 @@
+{{#if:{{{previous|{{{next|}}}}}}|<table style="width: 100%;">
+<tr><td style="width:50%;">←&nbsp;Previous</td><td style="width:50%;">Next&nbsp;→</td></tr>
+<tr><td style="width:50%">{{{previous}}}</td><td style="width:50%">{{{next}}}</td></tr>
+</table>}}
+{{#if:{{{previous|{{{next|}}}}}}|<table style="width: 100%;">
+<tr><td style="width:50%;">←&nbsp;Previous</td><td style="width:50%;">Next&nbsp;→</td></tr>
+<tr><td style="width:50%">{{{previous}}}</td><td style="width:50%">{{{next}}}</td></tr>
+</table>}}
+
+{{Hidebox
+ |state = hide
+ |title = {{Spoiler}}
+ |content = <center>Some text and links to [[World of Warcraft]]</center>
+}}
+{{Infobox
+|p3=123555555
+|p5={{Hidebox
+ |state = hide
+ |title = {{Spoiler}}
+ |content = <center>Some text and links to [[World of Warcraft]]</center>
+}}
+|p1 = {{#if:{{{previous|{{{next|}}}}}}|<table style="width: 100%;">
+<tr><td style="width:50%;">←&nbsp;Previous</td><td style="width:50%;">Next&nbsp;→</td></tr>
+<tr><td style="width:50%">{{{previous}}}</td><td style="width:50%">{{{next}}}</td></tr>
+</table>}}
+|p2 = {{#if:{{{previous|{{{next|}}}}}}|<table style="width: 100%;">
+<tr><td style="width:50%;">←&nbsp;Previous</td><td style="width:50%;">Next&nbsp;→</td></tr>
+<tr><td style="width:50%">{{{previous}}}</td><td style="width:50%">{{{next}}}</td></tr>
+</table>}}
+|p7={{Hidebox
+ |state = hide
+ |title = {{Spoiler}}
+ |content = <center>Some text and links to [[World of Warcraft]]</center>
+}}}}
