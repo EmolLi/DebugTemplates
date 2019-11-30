@@ -1,0 +1,9 @@
+<noinclude>For more information on this template see [[WoWWiki:Guild Progression Templates]].
+
+</noinclude>{{Guildprogress_world_header
+|faction={{Alliance Icon Small}} '''Alliance''' <!-- Horde / Alliance -->
+|header_color=#113 <!-- table heading color -->
+|bg_color=#223 <!-- table background color -->
+|server={{{1}}}
+|p3={{Alliance Icon Small}} '''Alliance''' <!-- Horde / Alliance -->
+}}
